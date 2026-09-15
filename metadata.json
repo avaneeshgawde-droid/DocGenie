@@ -1,0 +1,6 @@
+{
+  "name": "DocGenie",
+  "description": "AI-driven hospital appointment allocation & real-time patient-flow optimization platform foundation with synthetic healthcare data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

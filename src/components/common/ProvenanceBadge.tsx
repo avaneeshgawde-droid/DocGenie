@@ -53,7 +53,7 @@ export const ProvenanceBadge: React.FC<ProvenanceBadgeProps> = ({
       <span>{config.label}</span>
       {showDescription && (
         <span className="hidden sm:inline text-slate-500 font-normal ml-1">
-          — {config.description}
+          : {config.description}
         </span>
       )}
     </span>

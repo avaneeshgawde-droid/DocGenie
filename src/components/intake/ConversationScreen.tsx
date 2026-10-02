@@ -5,31 +5,25 @@ import {
   Edit3,
   CheckCircle2,
   RotateCcw,
-  Sparkles,
   Bot,
   User,
   ArrowRight,
   ArrowLeft,
-  Check,
-  X,
   FileCheck2,
-  Clock,
-  ChevronRight,
-  Building2,
-  Activity,
-  AlertCircle,
   PlusCircle,
   AlertTriangle,
   ShieldAlert,
   Loader2,
   FileCode2,
+  Lightbulb,
+  ShieldCheck,
+  Activity,
 } from 'lucide-react';
 import {
   SyntheticPatient,
   ClinicalCase,
   IntakeAnswer,
   HistorySectionId,
-  IntakeQuestion,
   IntakeConversationDraft,
   IntakeChatMessage,
   ValidatedStructuredIntakeRecord,
@@ -520,7 +514,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     }).join('\n');
 
     const flagSummary = reviewFlags.length > 0
-      ? `\n\nCONSERVATIVE CLINICAL REVIEW FLAGS (${reviewFlags.length}):\n${reviewFlags.map((f) => `⚠️ ${f}`).join('\n')}`
+      ? `\n\nCONSERVATIVE CLINICAL REVIEW FLAGS (${reviewFlags.length}):\n${reviewFlags.map((f) => `Review Flag: ${f}`).join('\n')}`
       : '\n\nReview Flags: None detected. Standard routine intake.';
 
     const structuredSummary = `Patient ${patient.fullName} (${patient.age}${patient.gender.charAt(0)}) intake completed via DocGenie Server-Side Gemini API.\n${summarySections}${flagSummary}`;
@@ -589,8 +583,6 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     });
   };
 
-  const activeAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant') || DEFAULT_INITIAL_MESSAGE;
-
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
       {/* Header with Title and Reset / Back Actions */}
@@ -598,17 +590,18 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-2xs">
-                <Bot className="w-5 h-5" />
+              <span className="w-8 h-8 rounded-lg bg-teal-800 text-white flex items-center justify-center shadow-2xs">
+                <Bot className="w-4 h-4" />
               </span>
               <span>DocGenie Clinical Pre-Consultation Intake</span>
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-2">
-            <span>Adaptive AI History Intake • Powered by Gemini Server-Side API</span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              <Sparkles className="w-3 h-3" />
-              <span>Zero Autonomous Diagnosis Guarantee</span>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-2">
+            <span>Adaptive Clinical Intake Interview</span>
+            <span className="text-slate-300">·</span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <ShieldCheck className="w-3 h-3 text-emerald-700" />
+              <span>Zero Autonomous Diagnosis Protocol</span>
             </span>
           </p>
         </div>
@@ -678,7 +671,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             <div className="text-xs space-y-1">
               <div className="font-bold text-amber-950 flex items-center gap-2">
                 <span>CONSERVATIVE CLINICAL REVIEW FLAGS GENERATED ({reviewFlags.length})</span>
-                <span className="text-[10px] uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded text-amber-900 font-bold">
+                <span className="text-[10px] uppercase tracking-wider bg-amber-200 px-2 py-0.5 rounded text-amber-900 font-bold">
                   Attending Doctor Alerted
                 </span>
               </div>
@@ -691,7 +684,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 ))}
               </ul>
               <p className="text-[11px] text-amber-700 italic pt-1">
-                ⚡ If you are experiencing sudden severe chest pain, inability to breathe, or loss of consciousness, please report to the Emergency OPD immediately.
+                If you are experiencing sudden severe chest pain, inability to breathe, or loss of consciousness, please report to the Emergency OPD immediately.
               </p>
             </div>
           </div>
@@ -708,8 +701,8 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
       {/* Draft Persistence Status Bar */}
       {lastSavedTime && !isSubmitted && (
         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-4 px-2">
-          <div className="flex items-center gap-1.5 text-teal-700 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="flex items-center gap-1.5 text-teal-800 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span>Dual-layer draft synced (Local + Cloud)</span>
           </div>
           <span className="text-slate-400">
@@ -720,16 +713,16 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
 
       {isSubmitted ? (
         /* Case Submitted Success View */
-        <Card className="border-teal-300 bg-gradient-to-b from-teal-50/50 to-white shadow-sm">
+        <Card className="border-teal-300 shadow-2xs">
           <CardContent className="p-8 text-center space-y-5">
-            <div className="w-16 h-16 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mx-auto shadow-2xs">
-              <CheckCircle2 className="w-8 h-8" />
+            <div className="w-14 h-14 bg-teal-100 text-teal-800 rounded-full flex items-center justify-center mx-auto shadow-2xs">
+              <CheckCircle2 className="w-7 h-7" />
             </div>
             <div>
-              <span className="text-xs uppercase font-bold tracking-wider text-teal-800 bg-teal-100/80 px-3 py-1 rounded-full">
+              <span className="text-xs uppercase font-bold tracking-wider text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded">
                 Pre-Consultation Intake Finalized
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-2.5">
                 Case #{createdCaseId} Queued for Clinician Review
               </h2>
               <p className="text-sm text-slate-600 max-w-lg mx-auto mt-2 leading-relaxed">
@@ -744,7 +737,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
                   Clinical History Brief
                 </span>
-                <span className="font-mono text-teal-700 font-semibold">{createdCaseId}</span>
+                <span className="font-mono text-teal-700 font-semibold">Case #{createdCaseId}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -760,7 +753,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
 
               {reviewFlags.length > 0 && (
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-800">
-                  <span className="font-bold block mb-1">⚠️ Urgent Review Flags ({reviewFlags.length}):</span>
+                  <span className="font-bold block mb-1">Urgent Review Flags ({reviewFlags.length}):</span>
                   {reviewFlags.map((f, i) => (
                     <div key={i}>• {f}</div>
                   ))}
@@ -787,13 +780,13 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-4">
               <Button
                 id="view-submitted-json-btn"
                 variant="outline"
                 onClick={handleOpenStructuredRecord}
-                icon={<FileCode2 className="w-4 h-4 text-teal-600" />}
-                className="border-teal-300 text-teal-900 bg-teal-50/50 hover:bg-teal-100 font-semibold"
+                icon={<FileCode2 className="w-4 h-4 text-teal-700" />}
+                className="border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold"
               >
                 Inspect Validated JSON (15 Fields)
               </Button>
@@ -802,7 +795,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 variant="primary"
                 onClick={handleStartNewCase}
                 icon={<PlusCircle className="w-4 h-4" />}
-                className="bg-teal-700 hover:bg-teal-800 text-white font-bold shadow-xs"
+                className="bg-teal-700 hover:bg-teal-800 text-white font-bold"
               >
                 Start New Case
               </Button>
@@ -826,7 +819,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
         </Card>
       ) : isReviewMode ? (
         /* Summary & Review Mode Before Final Submission */
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 shadow-2xs">
           <CardHeader
             title="Review & Confirm Pre-Consultation History"
             subtitle="Verify your answers across all 6 sections before sending to the attending physician."
@@ -846,7 +839,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] font-bold">
+                        <span className="w-5 h-5 rounded bg-teal-700 text-white flex items-center justify-center text-[10px] font-bold">
                           {section.stepNumber}
                         </span>
                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -873,7 +866,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                             rows={2}
                             value={editingText}
                             onChange={(e) => setEditingText(e.target.value)}
-                            className="w-full p-2.5 text-xs border border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none bg-teal-50/20"
+                            className="w-full p-2.5 text-xs border border-teal-600 rounded-lg focus:ring-1 focus:ring-teal-600 focus:outline-none bg-white"
                             placeholder="Update your answer..."
                           />
                           <div className="flex items-center justify-between gap-2">
@@ -931,7 +924,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 <select
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-600 focus:outline-none"
                 >
                   {DEPARTMENTS.map((dept) => (
                     <option key={dept} value={dept}>
@@ -954,8 +947,8 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                       className={`py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
                         perceivedSeverity === lvl
                           ? lvl === 'Severe'
-                            ? 'bg-rose-50 border-rose-400 text-rose-800 ring-2 ring-rose-200'
-                            : 'bg-teal-50 border-teal-500 text-teal-800 ring-2 ring-teal-200'
+                            ? 'bg-rose-50 border-rose-400 text-rose-800'
+                            : 'bg-teal-50 border-teal-600 text-teal-800'
                           : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
                       }`}
                     >
@@ -967,7 +960,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             </div>
 
             {/* Patient Consent / Safety Agreement Checkbox */}
-            <div className="p-3.5 bg-teal-50/60 border border-teal-200 rounded-xl text-xs text-slate-700 leading-relaxed">
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 leading-relaxed">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -981,15 +974,15 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             </div>
 
             {/* Structured Clinical JSON Card & Inspector Trigger */}
-            <div className="p-4 bg-slate-900 text-white rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+            <div className="p-4 bg-slate-900 text-white rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-600/30 border border-teal-500/40 text-teal-300 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
-                  <FileCode2 className="w-5 h-5 text-teal-400" />
+                <div className="w-9 h-9 rounded-lg bg-teal-600/30 border border-teal-500/40 text-teal-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <FileCode2 className="w-4 h-4 text-teal-400" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-xs sm:text-sm text-white">Validated Structured Clinical JSON (HL7/FHIR)</span>
-                    <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" />
                       <span>15/15 Fields Validated</span>
                     </span>
@@ -1030,7 +1023,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 variant="primary"
                 onClick={handleFinalCaseSubmit}
                 icon={<ArrowRight className="w-4 h-4" />}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto bg-teal-700 hover:bg-teal-800 text-white font-bold"
               >
                 Complete Intake &amp; Queue for Doctor
               </Button>
@@ -1041,7 +1034,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
         /* Active Conversation Stream View */
         <div className="space-y-4">
           {/* Main Chat Thread Box */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-2xs min-h-[460px] flex flex-col justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-2xs min-h-[460px] flex flex-col justify-between">
             {/* Conversation Messages Container */}
             <div className="space-y-6 flex-1 overflow-y-auto max-h-[520px] pr-1">
               {messages.map((msg, idx) => {
@@ -1052,22 +1045,22 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                   return (
                     <div key={msg.id || idx} className="space-y-2 pt-1">
                       <div className="flex items-start gap-3 max-w-2xl">
-                        <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <div className="w-8 h-8 rounded-lg bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-2xs">
                           <Bot className="w-4 h-4" />
                         </div>
-                        <div className="bg-teal-50/60 border border-teal-200 rounded-2xl rounded-tl-sm p-4 text-xs text-slate-800 shadow-2xs space-y-1.5">
+                        <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs text-slate-800 shadow-2xs space-y-1.5">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-[10px] text-teal-800 uppercase tracking-wider">
                               {msg.sectionTitle || secMeta?.title || 'History Intake'}
                             </span>
-                            <span className="text-teal-300">•</span>
-                            <span className="text-[10px] text-teal-700 font-medium">
+                            <span className="text-slate-300">·</span>
+                            <span className="text-[10px] text-slate-500 font-medium">
                               Section {stepNum} of 6
                             </span>
                             {msg.source === 'gemini' && (
-                              <span className="text-[10px] text-teal-600 inline-flex items-center gap-0.5 ml-auto">
-                                <Sparkles className="w-2.5 h-2.5" />
-                                <span>Adaptive</span>
+                              <span className="text-[10px] text-teal-700 inline-flex items-center gap-1 ml-auto font-medium">
+                                <Activity className="w-3 h-3 text-teal-600" />
+                                <span>Adaptive Intake</span>
                               </span>
                             )}
                           </div>
@@ -1075,9 +1068,10 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                             {msg.text}
                           </p>
                           {msg.contextHint && (
-                            <p className="text-[11px] text-slate-500 italic">
-                              💡 {msg.contextHint}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pt-1">
+                              <Lightbulb className="w-3 h-3 text-amber-600 shrink-0" />
+                              <span>{msg.contextHint}</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1086,22 +1080,22 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 } else {
                   return (
                     <div key={msg.id || idx} className="flex items-start justify-end gap-3 max-w-2xl ml-auto">
-                      <div className="bg-teal-700 text-white rounded-2xl rounded-tr-sm p-3.5 text-xs shadow-2xs space-y-1.5 max-w-lg">
-                        <div className="flex items-center justify-between gap-4 text-[10px] text-teal-200/90">
-                          <span>You (Patient)</span>
+                      <div className="bg-slate-900 text-white rounded-xl p-3.5 text-xs shadow-2xs space-y-1 max-w-lg">
+                        <div className="flex items-center justify-between gap-4 text-[10px] text-slate-400">
+                          <span>Patient Response</span>
                         </div>
                         {msg.isUnsure ? (
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-800/80 text-teal-100 text-[11px]">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-800 text-amber-200 text-[11px]">
                             <HelpCircle className="w-3 h-3 text-amber-300" />
                             <span className="font-semibold text-amber-200">I'm not sure / Unknown</span>
-                            <span className="opacity-75">— Marked for doctor review</span>
+                            <span className="opacity-75">— To be reviewed by physician</span>
                           </div>
                         ) : (
                           <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                         )}
                       </div>
 
-                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0">
                         <User className="w-4 h-4" />
                       </div>
                     </div>
@@ -1111,13 +1105,13 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
 
               {/* AI Typing / Processing State */}
               {isLoadingAI && (
-                <div className="flex items-start gap-3 max-w-2xl animate-pulse">
-                  <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <div className="flex items-start gap-3 max-w-2xl">
+                  <div className="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </div>
-                  <div className="bg-teal-50/80 border border-teal-200 rounded-2xl rounded-tl-sm p-3 text-xs text-teal-800 flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-teal-600 animate-spin" />
-                    <span className="font-medium">DocGenie AI is analyzing your response and formulating the next history question...</span>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 text-teal-700 animate-spin" />
+                    <span className="font-medium">Formulating next clinical history question...</span>
                   </div>
                 </div>
               )}
@@ -1134,7 +1128,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                         key={chip}
                         type="button"
                         onClick={() => handleChipClick(chip)}
-                        className="px-2.5 py-1 rounded-full text-xs bg-slate-100 hover:bg-teal-100 hover:text-teal-900 hover:border-teal-300 border border-slate-200 text-slate-700 transition-colors cursor-pointer text-left"
+                        className="px-2.5 py-1 rounded-md text-xs bg-white hover:bg-teal-50 hover:text-teal-900 hover:border-teal-300 border border-slate-200 text-slate-700 transition-colors cursor-pointer text-left shadow-2xs"
                       >
                         + {chip}
                       </button>
@@ -1186,7 +1180,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                       }
                     }}
                     placeholder={activeContextHint || 'Describe your symptoms clearly (e.g. onset, severity, duration)...'}
-                    className="w-full p-3 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none placeholder:text-slate-400 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                    className="w-full p-3 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-600 focus:outline-none placeholder:text-slate-400 bg-white disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </div>
 
@@ -1198,7 +1192,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                     type="button"
                     disabled={isLoadingAI}
                     onClick={handleNotSure}
-                    className="text-amber-800 border-amber-300 hover:bg-amber-50"
+                    className="text-slate-700 border-slate-300 hover:bg-slate-50"
                     icon={<HelpCircle className="w-4 h-4 text-amber-600" />}
                     title="Click if you don't know or are uncertain about this information"
                   >
@@ -1212,6 +1206,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                     disabled={isLoadingAI || !inputText.trim()}
                     onClick={() => handleAnswerSubmit()}
                     icon={isLoadingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    className="bg-teal-700 hover:bg-teal-800 text-white font-bold"
                   >
                     <span>Submit</span>
                   </Button>

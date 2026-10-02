@@ -9,7 +9,6 @@ import {
   X,
   ShieldCheck,
   Clock,
-  Sparkles,
   Database,
   FileText,
   User,
@@ -17,8 +16,6 @@ import {
   Layers,
   HelpCircle,
   Pill,
-  AlertCircle,
-  ExternalLink,
 } from 'lucide-react';
 import { ValidatedStructuredIntakeRecord } from '../../types/index';
 import { Button } from '../common/Button';
@@ -69,7 +66,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
   const auditChecklist = [
     { num: 1, label: 'Patient Identifier & UHID', value: `${record.patientId} (${record.uhid})`, status: 'VALID' },
     { num: 2, label: 'Chief Complaint', value: record.chiefComplaint, status: 'VALID' },
-    { num: 3, label: 'Onset & Duration', value: `${record.onsetDuration.onset || 'Unspecified'} • ${record.onsetDuration.duration || 'Unspecified'}`, status: 'VALID' },
+    { num: 3, label: 'Onset & Duration', value: `${record.onsetDuration.onset || 'Unspecified'} · ${record.onsetDuration.duration || 'Unspecified'}`, status: 'VALID' },
     { num: 4, label: 'Symptom Description & Location & Severity', value: `${record.symptomDetails.description} (Loc: ${record.symptomDetails.location || 'Pending exam'}, Sev: ${record.symptomDetails.severity})`, status: 'VALID' },
     { num: 5, label: 'Associated Symptoms', value: `${record.associatedSymptoms.length} documented`, status: 'VALID' },
     { num: 6, label: 'Relevant History & Known Conditions', value: `${record.relevantHistory.knownChronicConditions.length} chronic conditions, Surgical: ${record.relevantHistory.surgicalHistory ? 'Yes' : 'None'}`, status: 'VALID' },
@@ -85,32 +82,32 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Top Header */}
         <div className="p-5 sm:p-6 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800">
           <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-teal-600/30 border border-teal-500/40 text-teal-300 flex items-center justify-center shrink-0 shadow-inner">
-              <FileCode2 className="w-6 h-6 text-teal-400" />
+            <div className="w-10 h-10 rounded-lg bg-teal-600/30 border border-teal-500/40 text-teal-300 flex items-center justify-center shrink-0">
+              <FileCode2 className="w-5 h-5 text-teal-400" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
                   Validated Structured Clinical JSON
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Schema Valid (15/15)</span>
                 </span>
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
                   v{record.timestampsVersion.schemaVersion}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
                 <span>Patient: <strong className="text-slate-200">{record.patientName}</strong></span>
-                <span>•</span>
+                <span className="text-slate-600">·</span>
                 <span>ID: <strong className="text-slate-300 font-mono">{record.patientId}</strong></span>
-                <span>•</span>
+                <span className="text-slate-600">·</span>
                 <span>UHID: <strong className="text-teal-300 font-mono">{record.uhid}</strong></span>
               </p>
             </div>
@@ -137,7 +134,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
             </Button>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors ml-1"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors ml-1 cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -145,11 +142,11 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
           </div>
         </div>
 
-        {/* Status Bar: Supabase Sync & Zero-Guess Affirmation */}
-        <div className="bg-slate-100 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between text-xs gap-3">
+        {/* Status Bar */}
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between text-xs gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-medium text-[11px] bg-teal-50 text-teal-800 border border-teal-200">
-              <Database className="w-3.5 h-3.5 text-teal-600" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded font-medium text-[11px] bg-teal-50 text-teal-800 border border-teal-200">
+              <Database className="w-3.5 h-3.5 text-teal-700" />
               <span>
                 {record.supabaseSyncStatus?.isSynced
                   ? 'Supabase: Synced (table: structured_intake_records)'
@@ -157,8 +154,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               </span>
             </span>
 
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-medium text-[11px] bg-amber-50 text-amber-800 border border-amber-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded font-medium text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
               <span>Zero-Guess Protocol: {record.unknownMissingFields.length} unconfirmed item(s) preserved without hallucination</span>
             </span>
           </div>
@@ -173,9 +170,9 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
         <div className="flex border-b border-slate-200 bg-white px-6">
           <button
             onClick={() => setActiveTab('cards')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
               activeTab === 'cards'
-                ? 'border-teal-600 text-teal-800 bg-teal-50/40'
+                ? 'border-teal-700 text-teal-900 bg-teal-50/40'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -184,9 +181,9 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('json')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
               activeTab === 'json'
-                ? 'border-teal-600 text-teal-800 bg-teal-50/40'
+                ? 'border-teal-700 text-teal-900 bg-teal-50/40'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -195,14 +192,14 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('audit')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
               activeTab === 'audit'
-                ? 'border-teal-600 text-teal-800 bg-teal-50/40'
+                ? 'border-teal-700 text-teal-900 bg-teal-50/40'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>Validation & Compliance Audit</span>
+            <span>Validation &amp; Compliance Audit</span>
           </button>
         </div>
 
@@ -214,8 +211,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <User className="w-4 h-4 text-teal-600" />
-                    <span>1. Patient ID & Identifiers</span>
+                    <User className="w-4 h-4 text-teal-700" />
+                    <span>1. Patient ID &amp; Identifiers</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     ID / UHID
@@ -233,8 +230,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <Activity className="w-4 h-4 text-teal-600" />
-                    <span>2 & 3. Chief Complaint, Onset & Duration</span>
+                    <Activity className="w-4 h-4 text-teal-700" />
+                    <span>2 &amp; 3. Chief Complaint, Onset &amp; Duration</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     HPI Core
@@ -248,7 +245,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                       <span className="text-slate-400 text-[10px] block uppercase font-semibold">Reported Onset</span>
-                      <span className="font-medium text-slate-800">{record.onsetDuration.onset || 'Unspecified (Patient unsure)'}</span>
+                      <span className="font-medium text-slate-800">{record.onsetDuration.onset || 'Unspecified'}</span>
                     </div>
                     <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                       <span className="text-slate-400 text-[10px] block uppercase font-semibold">Timeline Duration</span>
@@ -262,8 +259,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <Layers className="w-4 h-4 text-teal-600" />
-                    <span>4 & 5. Symptom Details & Associated Signs</span>
+                    <Layers className="w-4 h-4 text-teal-700" />
+                    <span>4 &amp; 5. Symptom Details &amp; Associated Signs</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     Clinical Spec
@@ -274,9 +271,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                     <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                       <span className="text-slate-400 text-[10px] block uppercase font-semibold">Anatomical Location</span>
                       <span className="font-medium text-slate-800">
-                        {record.symptomDetails.location || (
-                          <em className="text-amber-700 font-normal">Not localized (requires physical exam)</em>
-                        )}
+                        {record.symptomDetails.location || 'Pending physical examination'}
                       </span>
                     </div>
                     <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
@@ -289,7 +284,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                     {record.associatedSymptoms.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {record.associatedSymptoms.map((sym, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-medium border border-slate-200">
+                          <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium border border-slate-200">
                             • {sym}
                           </span>
                         ))}
@@ -305,7 +300,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <Activity className="w-4 h-4 text-teal-600" />
+                    <Activity className="w-4 h-4 text-teal-700" />
                     <span>6. Relevant Medical History</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
@@ -336,8 +331,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <Pill className="w-4 h-4 text-teal-600" />
-                    <span>7 & 8. Medications & Allergies</span>
+                    <Pill className="w-4 h-4 text-teal-700" />
+                    <span>7 &amp; 8. Medications &amp; Allergies</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     Rx / Sensitivities
@@ -364,8 +359,9 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                     {record.allergies.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {record.allergies.map((a) => (
-                          <span key={a.id} className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded text-[11px] font-medium">
-                            ⚠️ {a.substance}
+                          <span key={a.id} className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded text-[11px] font-medium flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                            <span>{a.substance}</span>
                           </span>
                         ))}
                       </div>
@@ -380,8 +376,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <User className="w-4 h-4 text-teal-600" />
-                    <span>9. Family & Social History</span>
+                    <User className="w-4 h-4 text-teal-700" />
+                    <span>9. Family &amp; Social History</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     Genetics / Lifestyle
@@ -393,8 +389,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                     {record.familySocialHistory.familyHistory || 'None reported / to be clarified.'}
                   </p>
                   <p>
-                    <strong>Lifestyle & Social Habits:</strong>{' '}
-                    {record.familySocialHistory.lifestyleSocial || record.familySocialHistory.habitsAndExposure || 'Desk-based work, non-smoker on profile.'}
+                    <strong>Lifestyle &amp; Social Habits:</strong>{' '}
+                    {record.familySocialHistory.lifestyleSocial || record.familySocialHistory.habitsAndExposure || 'Non-smoker, desk-based work on profile.'}
                   </p>
                 </div>
               </div>
@@ -403,7 +399,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2 md:col-span-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <FileText className="w-4 h-4 text-teal-600" />
+                    <FileText className="w-4 h-4 text-teal-700" />
                     <span>10. Referenced Clinical Documents ({record.referencedDocuments.length})</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
@@ -421,9 +417,9 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                         <p className="text-[11px] text-slate-500 mt-0.5">{doc.summary}</p>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
                           <span className="font-mono">{doc.documentType}</span>
-                          <span>•</span>
+                          <span>·</span>
                           <span>{doc.referenceDate}</span>
-                          {doc.fileSize && <span>• {doc.fileSize}</span>}
+                          {doc.fileSize && <span>· {doc.fileSize}</span>}
                         </div>
                       </div>
                     </div>
@@ -431,40 +427,41 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                 </div>
               </div>
 
-              {/* Field 11: Unknown / Missing Fields ("Never guess missing data") */}
-              <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 shadow-2xs space-y-2 md:col-span-2">
-                <div className="flex items-center justify-between text-xs font-bold text-amber-900 uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <HelpCircle className="w-4 h-4 text-amber-600" />
+              {/* Field 11: Unknown / Missing Fields */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-slate-800">
+                    <HelpCircle className="w-4 h-4 text-slate-600" />
                     <span>11. Unknown / Missing Fields Checklist ({record.unknownMissingFields.length})</span>
                   </span>
-                  <span className="text-[10px] bg-amber-100 px-2 py-0.5 rounded text-amber-900 font-semibold">
-                    Never Guess Missing Data Protocol
+                  <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-700 font-semibold">
+                    Zero-Guess Protocol
                   </span>
                 </div>
-                <p className="text-[11px] text-amber-800">
+                <p className="text-[11px] text-slate-600">
                   The clinical parser rigorously tracks all patient-marked "unsure" or omitted items. Missing facts are never hallucinated.
                 </p>
                 {record.unknownMissingFields.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     {record.unknownMissingFields.map((unk) => (
-                      <div key={unk.id} className="p-2 bg-white rounded-lg border border-amber-200">
+                      <div key={unk.id} className="p-2 bg-white rounded-lg border border-slate-200">
                         <div className="flex items-center justify-between">
-                          <strong className="text-amber-950">{unk.fieldName}</strong>
-                          <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-medium">
+                          <strong className="text-slate-900">{unk.fieldName}</strong>
+                          <span className="text-[9px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono font-medium">
                             {unk.reason}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-600 mt-1">{unk.inquiryPrompt}</p>
-                        <span className="text-[10px] text-amber-700 font-medium mt-1 inline-block">
+                        <span className="text-[10px] text-slate-500 font-medium mt-1 inline-block">
                           Status: {unk.status}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-white rounded-lg border border-emerald-200 text-emerald-800 text-xs">
-                    All standard clinical history sections provided by patient without unknown items.
+                  <div className="p-2.5 bg-white rounded-lg border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>All standard clinical history sections provided by patient without unknown items.</span>
                   </div>
                 )}
               </div>
@@ -486,7 +483,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                       <div key={flag.id} className="p-2.5 bg-rose-50/60 rounded-lg border border-rose-200 flex items-start justify-between gap-3">
                         <div>
                           <div className="font-bold text-rose-950 flex items-center gap-1.5">
-                            <span>⚠️</span>
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                             <span>{flag.flag}</span>
                           </div>
                           <p className="text-[11px] text-rose-900 mt-0.5">
@@ -511,30 +508,30 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               </div>
 
               {/* Field 13: AI-Generated Summary & Strict Diagnostic Disclaimer */}
-              <div className="bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 shadow-2xs space-y-2 md:col-span-2">
-                <div className="flex items-center justify-between text-xs font-bold text-indigo-900 uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <span>13. AI-Generated Summary & Clinical Narrative</span>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-slate-800">
+                    <FileText className="w-4 h-4 text-teal-700" />
+                    <span>13. AI-Generated Summary &amp; Clinical Narrative</span>
                   </span>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-mono">
+                  <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono">
                     Decision Support Only
                   </span>
                 </div>
-                <div className="p-3 bg-white rounded-lg border border-indigo-100 text-xs text-slate-800 leading-relaxed font-sans">
+                <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-800 leading-relaxed font-sans">
                   {record.aiGeneratedSummary.clinicalNarrative}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                  <div className="p-2.5 bg-white rounded-lg border border-indigo-100">
-                    <span className="text-[10px] font-bold uppercase text-indigo-950 block mb-1">Chief Findings:</span>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase text-slate-800 block mb-1">Chief Findings:</span>
                     <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-700">
                       {record.aiGeneratedSummary.chiefFindings.map((f, i) => (
                         <li key={i}>{f}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="p-2.5 bg-white rounded-lg border border-indigo-100">
-                    <span className="text-[10px] font-bold uppercase text-indigo-950 block mb-1">Suggested Clinical Focus:</span>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase text-slate-800 block mb-1">Suggested Clinical Focus:</span>
                     <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-700">
                       {record.aiGeneratedSummary.suggestedClinicalFocus.map((f, i) => (
                         <li key={i}>{f}</li>
@@ -543,12 +540,12 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                   </div>
                 </div>
                 {/* Explicit Anti-Autonomous Diagnosis Affirmation */}
-                <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-lg text-amber-950 text-[11px] flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-[11px] flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
                   <div>
                     <strong>Mandatory Clinical Non-Autonomous Disclaimer:</strong>{' '}
                     {record.aiGeneratedSummary.disclaimer}{' '}
-                    <span className="font-mono font-bold block mt-0.5 text-amber-900">
+                    <span className="font-mono font-bold block mt-0.5 text-slate-900">
                       diagnosticClaim: "{record.aiGeneratedSummary.diagnosticClaim}"
                     </span>
                   </div>
@@ -559,8 +556,8 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2 md:col-span-2">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-teal-800">
-                    <Clock className="w-4 h-4 text-teal-600" />
-                    <span>14 & 15. Source Provenance, Timestamps & Versioning</span>
+                    <Clock className="w-4 h-4 text-teal-700" />
+                    <span>14 &amp; 15. Source Provenance, Timestamps &amp; Versioning</span>
                   </span>
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
                     Audit Trail
@@ -599,14 +596,14 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCopyJson}
-                    className="px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs flex items-center gap-1 font-mono"
+                    className="px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs flex items-center gap-1 font-mono cursor-pointer"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     onClick={handleDownloadJson}
-                    className="px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs flex items-center gap-1 font-mono"
+                    className="px-2.5 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs flex items-center gap-1 font-mono cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download</span>
@@ -625,7 +622,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-teal-600" />
+                  <ShieldCheck className="w-5 h-5 text-teal-700" />
                   <span>15-Field Clinical Validation Audit Checklist</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
@@ -637,7 +634,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                 {auditChecklist.map((item) => (
                   <div key={item.num} className="p-3 sm:px-4 flex items-center justify-between text-xs hover:bg-slate-50/80">
                     <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-[11px] shrink-0">
+                      <span className="w-6 h-6 rounded bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-[11px] shrink-0">
                         {item.num}
                       </span>
                       <div>
@@ -645,7 +642,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
                         <div className="text-slate-500 text-[11px] truncate max-w-md">{item.value}</div>
                       </div>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       <span>{item.status}</span>
                     </span>
@@ -654,7 +651,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
               </div>
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <h4 className="font-bold text-slate-800">Compliance & Regulatory Attestation:</h4>
+                <h4 className="font-bold text-slate-800">Compliance &amp; Regulatory Attestation:</h4>
                 <ul className="list-disc pl-5 text-slate-600 space-y-1 text-[11px]">
                   <li><strong>Zero-Guess Mandate:</strong> Missing parameters are explicitly indexed in <code className="text-amber-800 font-mono">unknownMissingFields</code>. No medical data has been hallucinated.</li>
                   <li><strong>Non-Autonomous Diagnosis:</strong> The summary engine acts strictly as an administrative and triage decision-support tool. Final diagnosis is solely the duty of the licensed attending doctor.</li>
@@ -668,7 +665,7 @@ export const StructuredRecordViewer: React.FC<StructuredRecordViewerProps> = ({
         {/* Modal Footer */}
         <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
           <div className="text-xs text-slate-500 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span>Record ID: <strong className="font-mono text-slate-700">{record.id}</strong></span>
           </div>
           <Button variant="primary" size="sm" onClick={onClose} className="bg-teal-700 hover:bg-teal-800 text-white">

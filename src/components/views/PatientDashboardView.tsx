@@ -9,19 +9,13 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
-  Sparkles,
   Edit3,
   Pill,
   History,
   Phone,
-  Mail,
-  MapPin,
   ShieldAlert,
   AlertTriangle,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw
+  X,
 } from 'lucide-react';
 import { SyntheticPatient, ClinicalCase } from '../../types';
 import { Card, CardHeader, CardContent } from '../common/Card';
@@ -30,7 +24,6 @@ import { StatusBadge, PriorityBadge } from '../common/Badge';
 import { ProvenanceBadge, ProvenanceLegend } from '../common/ProvenanceBadge';
 import { EditPatientProfileModal } from '../profile/EditPatientProfileModal';
 import { useAuth } from '../../context/AuthContext';
-import { SYNTHETIC_PATIENTS } from '../../data/mockData';
 import { resetStoredPatientToDefault } from '../../lib/patientStorage';
 
 interface PatientDashboardViewProps {
@@ -80,84 +73,84 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
       {showSaveToast && (
         <div
           id="profile-save-toast"
-          className="fixed bottom-6 right-6 z-50 max-w-md bg-emerald-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-700 flex items-center gap-3 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center gap-3 animate-in fade-in duration-150"
         >
-          <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-emerald-100" />
+          <div className="w-8 h-8 rounded-lg bg-teal-700 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4 text-white" />
           </div>
           <div className="text-xs">
-            <span className="font-bold block">Profile Updated</span>
-            <span className="text-emerald-200">{toastMessage}</span>
+            <span className="font-bold block text-white">Profile Updated</span>
+            <span className="text-slate-300">{toastMessage}</span>
           </div>
           <button
             onClick={() => setShowSaveToast(false)}
-            className="text-emerald-300 hover:text-white ml-auto text-xs p-1"
+            className="text-slate-400 hover:text-white ml-auto text-xs p-1 cursor-pointer"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Top Banner: Patient Overview & Quick Actions */}
-      <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 rounded-2xl text-white p-6 sm:p-8 shadow-md border border-teal-800/60">
+      {/* Top Banner: Patient Overview & Actions */}
+      <div className="bg-slate-900 text-white rounded-xl p-6 sm:p-7 border border-slate-800 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-teal-700/80 border border-teal-500/30 flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-inner">
+            <div className="w-14 h-14 rounded-xl bg-teal-800 border border-teal-700 text-white flex items-center justify-center text-xl font-bold shrink-0 shadow-2xs">
               {patient.fullName.charAt(0)}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                   {patient.fullName}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-200 border border-teal-400/30 font-mono">
+                <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 font-mono">
                   {patient.uhid}
                 </span>
-                <ProvenanceBadge source="PATIENT_REPORTED" size="sm" className="bg-emerald-950/70 border-emerald-500/40 text-emerald-200" />
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-400/20 text-amber-200 border border-amber-300/30">
+                <ProvenanceBadge source="PATIENT_REPORTED" size="sm" className="bg-slate-800 border-slate-700 text-slate-300" />
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
                   Demo Synthetic Record
                 </span>
               </div>
 
-              <p className="text-sm text-teal-100/90 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <p className="text-xs text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span>
-                  {patient.age} Yrs ({patient.dateOfBirth || 'DOB on file'}) • {patient.gender}
+                  {patient.age} Yrs ({patient.dateOfBirth || 'DOB on file'}) · {patient.gender}
                 </span>
-                <span>•</span>
+                <span className="text-slate-600">·</span>
                 <span>
                   Blood Group: <strong className="text-white">{patient.bloodGroup}</strong>
                 </span>
-                <span>•</span>
+                <span className="text-slate-600">·</span>
                 <span>
-                  Phone: <span className="font-mono text-xs">{patient.phone}</span>
+                  Phone: <span className="font-mono">{patient.phone}</span>
                 </span>
               </p>
 
-              {/* Quick Status Chips */}
+              {/* Quick Status Badges */}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 {patient.allergies.length > 0 ? (
-                  <div className="flex items-center gap-1.5 bg-rose-950/60 border border-rose-500/40 text-rose-200 px-3 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-800 text-rose-200 px-2.5 py-0.5 rounded-md font-medium">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                     <span>
                       Allergies ({patient.allergies.length}):{' '}
-                      <strong>{patient.allergies.join(', ')}</strong>
+                      <strong className="text-rose-100">{patient.allergies.join(', ')}</strong>
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 text-slate-300 px-3 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-md">
                     <span>No known drug allergies reported</span>
                   </div>
                 )}
 
                 {patient.medications && patient.medications.length > 0 && (
-                  <div className="flex items-center gap-1.5 bg-teal-950/60 border border-teal-500/40 text-teal-200 px-3 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-md">
                     <Pill className="w-3.5 h-3.5 text-teal-400 shrink-0" />
                     <span>Active Meds: {patient.medications.length}</span>
                   </div>
                 )}
 
                 {patient.emergencyContact?.name && (
-                  <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 text-slate-300 px-3 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-md">
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>
                       Emergency: {patient.emergencyContact.name} ({patient.emergencyContact.relationship})
@@ -168,14 +161,14 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <Button
               id="edit-patient-profile-btn"
               variant="outline"
               size="md"
               onClick={() => setIsEditProfileModalOpen(true)}
-              className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold backdrop-blur-xs"
-              icon={<Edit3 className="w-4 h-4" />}
+              className="border-slate-700 text-slate-200 hover:bg-slate-800 bg-slate-800/80 text-xs font-semibold"
+              icon={<Edit3 className="w-3.5 h-3.5" />}
             >
               Edit Health Profile
             </Button>
@@ -183,10 +176,10 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             <Button
               id="patient-start-case-btn"
               variant="primary"
-              size="lg"
+              size="md"
               onClick={onStartNewCase}
-              className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold border-none shadow-lg text-sm"
-              icon={<PlusCircle className="w-5 h-5" />}
+              className="bg-teal-600 hover:bg-teal-500 text-white font-bold border-teal-600 text-xs"
+              icon={<PlusCircle className="w-4 h-4" />}
             >
               Start New Case Intake
             </Button>
@@ -198,10 +191,10 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
       <ProvenanceLegend />
 
       {/* Patient Health Baseline & Editable Profile Card */}
-      <Card className="border-teal-200/80 shadow-xs">
+      <Card className="border-slate-200 shadow-2xs">
         <CardHeader
           title="Patient Baseline Health Profile"
-          subtitle="Direct patient self-reported demographic disclosure, pharmacological history, and comorbidities."
+          subtitle="Self-reported demographic disclosure, pharmacological history, and comorbidities."
           action={
             <div className="flex items-center gap-2">
               <ProvenanceBadge source="PATIENT_REPORTED" size="sm" />
@@ -227,12 +220,12 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             onClick={() => setActiveProfileTab('summary')}
             className={`py-3 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeProfileTab === 'summary'
-                ? 'border-teal-700 text-teal-800'
+                ? 'border-teal-700 text-teal-800 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Demographics & Vitals</span>
+            <span>Demographics &amp; Vitals</span>
           </button>
           <button
             type="button"
@@ -240,12 +233,12 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             onClick={() => setActiveProfileTab('medications')}
             className={`py-3 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeProfileTab === 'medications'
-                ? 'border-teal-700 text-teal-800'
+                ? 'border-teal-700 text-teal-800 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Pill className="w-3.5 h-3.5" />
-            <span>Allergies & Current Medications ({patient.medications?.length || 0})</span>
+            <span>Allergies &amp; Current Medications ({patient.medications?.length || 0})</span>
           </button>
           <button
             type="button"
@@ -253,12 +246,12 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             onClick={() => setActiveProfileTab('history')}
             className={`py-3 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeProfileTab === 'history'
-                ? 'border-teal-700 text-teal-800'
+                ? 'border-teal-700 text-teal-800 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Known Conditions & Medical History</span>
+            <span>Known Conditions &amp; Medical History</span>
           </button>
         </div>
 
@@ -267,11 +260,11 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
           {activeProfileTab === 'summary' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
               {/* Personal Details */}
-              <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2.5">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
                 <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-2">
                   <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4 text-teal-700" />
-                    <span>Identity & Demographics</span>
+                    <span>Identity &amp; Demographics</span>
                   </span>
                   <ProvenanceBadge source="PATIENT_REPORTED" size="sm" />
                 </div>
@@ -281,12 +274,12 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                     <span className="font-semibold text-slate-800">{patient.fullName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Date of Birth (DOB):</span>
-                    <span className="font-semibold text-slate-800">{patient.dateOfBirth || 'Not specified'}</span>
+                    <span className="text-slate-500">Date of Birth:</span>
+                    <span className="font-semibold text-slate-800 font-mono">{patient.dateOfBirth || 'Not specified'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Age:</span>
-                    <span className="font-semibold text-slate-800">{patient.age} Years</span>
+                    <span className="font-semibold text-slate-800 tabular-nums">{patient.age} Years</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Sex / Gender:</span>
@@ -300,7 +293,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
               </div>
 
               {/* Contact Information */}
-              <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2.5">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
                 <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-2">
                   <span className="flex items-center gap-1.5">
                     <Phone className="w-4 h-4 text-teal-700" />
@@ -327,13 +320,13 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                   </div>
                   <div className="flex justify-between pt-1 border-t border-slate-200 text-slate-500">
                     <span>Last Profile Sync:</span>
-                    <span>{patient.lastProfileUpdateDate || '2026-09-14'}</span>
+                    <span className="font-mono">{patient.lastProfileUpdateDate || '2026-09-14'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Emergency Contact */}
-              <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2.5 md:col-span-2 lg:col-span-1">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 md:col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-2">
                   <span className="flex items-center gap-1.5">
                     <ShieldAlert className="w-4 h-4 text-teal-700" />
@@ -357,7 +350,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                         {patient.emergencyContact.phone}
                       </span>
                     </div>
-                    <div className="p-2 bg-teal-50 rounded-lg text-teal-800 text-[11px] mt-2">
+                    <div className="p-2 bg-teal-50 rounded text-teal-800 text-[11px] mt-2 border border-teal-200">
                       Priority contact for triage alerts during urgent care scenarios.
                     </div>
                   </div>
@@ -385,7 +378,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-rose-600" />
                     <h4 className="font-bold text-slate-900 text-sm">
-                      Known Allergies & Sensitivities
+                      Known Allergies &amp; Sensitivities
                     </h4>
                   </div>
                   <ProvenanceBadge source="PATIENT_REPORTED" size="sm" />
@@ -399,7 +392,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                     {patient.allergies.map((allergy, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 font-medium flex items-center gap-1.5 shadow-2xs"
+                        className="px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 font-medium flex items-center gap-1.5 shadow-2xs"
                       >
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                         <span>{allergy}</span>
@@ -487,7 +480,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                     {patient.chronicConditions.map((cond, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-medium shadow-2xs"
+                        className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-medium shadow-2xs"
                       >
                         {cond}
                       </span>
@@ -498,28 +491,28 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
 
               {/* Detailed Relevant History Breakdown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-200">
-                <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-1">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="font-bold text-slate-900 block">Past Surgical / Procedures:</span>
                   <p className="text-slate-600 leading-relaxed">
                     {patient.relevantHistory?.pastSurgicalHistory || 'No prior surgical history reported.'}
                   </p>
                 </div>
 
-                <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-1">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="font-bold text-slate-900 block">Family Medical History:</span>
                   <p className="text-slate-600 leading-relaxed">
                     {patient.relevantHistory?.familyHistory || 'No significant family history noted.'}
                   </p>
                 </div>
 
-                <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-1">
-                  <span className="font-bold text-slate-900 block">Lifestyle & Habits:</span>
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="font-bold text-slate-900 block">Lifestyle &amp; Habits:</span>
                   <p className="text-slate-600 leading-relaxed">
                     {patient.relevantHistory?.lifestyleNotes || 'Lifestyle habits not specified.'}
                   </p>
                 </div>
 
-                <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-1">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="font-bold text-slate-900 block">General Clinical Notes:</span>
                   <p className="text-slate-600 leading-relaxed">
                     {patient.relevantHistory?.generalMedicalNotes || 'Annual checkup routine.'}
@@ -579,10 +572,10 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-slate-500">
+                        <span className="text-xs font-mono font-bold text-slate-600">
                           {c.id}
                         </span>
-                        <span className="text-xs text-slate-400">•</span>
+                        <span className="text-xs text-slate-300">·</span>
                         <span className="text-xs font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded">
                           {c.department}
                         </span>
@@ -607,11 +600,11 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          {c.createdAt}
+                          <span>{c.createdAt}</span>
                         </span>
-                        <span>•</span>
+                        <span>·</span>
                         <span>Duration: {c.symptomDuration}</span>
-                        <span>•</span>
+                        <span>·</span>
                         <span>Severity: {c.severityLevel}</span>
                       </div>
 
@@ -620,7 +613,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                         <span className="text-[11px] font-medium text-slate-600">
                           Completeness:
                         </span>
-                        <div className="w-20 bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
                               c.completenessScore >= 80
@@ -630,7 +623,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                                 : 'bg-rose-500'
                             }`}
                             style={{ width: `${c.completenessScore}%` }}
-                          ></div>
+                          />
                         </div>
                         <span className="font-mono font-bold text-slate-700">
                           {c.completenessScore}%
@@ -640,7 +633,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
 
                     {/* Expandable Case Snapshot */}
                     {selectedCase?.id === c.id && (
-                      <div className="mt-4 pt-3 border-t border-teal-100 bg-teal-50/50 -mx-4 -mb-4 p-4 rounded-b-xl space-y-3">
+                      <div className="mt-4 pt-3 border-t border-teal-100 bg-teal-50/40 -mx-4 -mb-4 p-4 rounded-b-xl space-y-3">
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-teal-900">
@@ -648,7 +641,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                             </h4>
                             <ProvenanceBadge source="AI_GENERATED" size="sm" />
                           </div>
-                          <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-teal-200">
+                          <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-teal-200 font-mono">
                             {c.structuredSummaryPreview}
                           </p>
                         </div>
@@ -656,7 +649,10 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                         {c.redFlags.length > 0 && (
                           <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-bold">Safety Red Flags Identified:</span>
+                              <span className="font-bold flex items-center gap-1.5">
+                                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                                <span>Safety Red Flags Identified:</span>
+                              </span>
                               <ProvenanceBadge source="AI_GENERATED" size="sm" />
                             </div>
                             <ul className="list-disc pl-4 space-y-0.5">
@@ -670,12 +666,15 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
                         {c.doctorNotes && (
                           <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-bold">Attending Clinician Verification Note:</span>
+                              <span className="font-bold flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Attending Clinician Verification Note:</span>
+                              </span>
                               <ProvenanceBadge source="CLINICIAN_VERIFIED" size="sm" />
                             </div>
                             <p>{c.doctorNotes}</p>
                             {c.verifiedAt && (
-                              <span className="text-[10px] text-emerald-700 block mt-1">
+                              <span className="text-[10px] text-emerald-700 block mt-1 font-mono">
                                 Verified at {c.verifiedAt} by {c.assignedDoctorName || 'Consultant'}
                               </span>
                             )}
@@ -696,7 +695,7 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <HeartPulse className="w-4 h-4 text-teal-600" />
-                <span>Patient Provenance Card</span>
+                <span>Patient Health Passport</span>
               </h3>
               <ProvenanceBadge source="PATIENT_REPORTED" size="sm" />
             </div>
@@ -746,12 +745,12 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
             </CardContent>
           </Card>
 
-          <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-xl text-xs text-teal-900 space-y-2">
+          <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-950 space-y-2">
             <div className="flex items-center gap-1.5 font-bold">
               <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
               <span>Patient Safety Disclaimer</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-teal-800">
+            <p className="text-[11px] leading-relaxed text-slate-700">
               DocGenie pre-consultation intake assists doctors by organizing self-reported history. It does not generate medical diagnoses or dispense autonomous treatment. In emergencies, visit the nearest Emergency Room immediately.
             </p>
           </div>

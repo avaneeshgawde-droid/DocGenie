@@ -22,6 +22,7 @@ import { DisclaimerBanner } from './components/common/DisclaimerBanner';
 import { Navbar } from './components/common/Navbar';
 import { SyntheticDataModal } from './components/common/SyntheticDataModal';
 import { SupabaseConfigModal } from './components/common/SupabaseConfigModal';
+import { LegalModal } from './components/common/LegalModal';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PatientLoginView } from './components/views/PatientLoginView';
 import { PatientDashboardView } from './components/views/PatientDashboardView';
@@ -67,6 +68,10 @@ function DocGenieMain() {
   });
   const [isSyntheticModalOpen, setIsSyntheticModalOpen] = useState(false);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [legalModalState, setLegalModalState] = useState<{ isOpen: boolean; tab: 'terms' | 'privacy' }>({
+    isOpen: false,
+    tab: 'terms',
+  });
 
   // Dual-layer: Check Supabase on mount for persisted cases
   useEffect(() => {
@@ -216,20 +221,20 @@ function DocGenieMain() {
             <div className="w-6 h-6 rounded-md bg-teal-700 flex items-center justify-center text-white text-xs font-bold">
               <Activity className="w-3.5 h-3.5" />
             </div>
-            <span className="font-semibold text-slate-700">DocGenie</span>
-            <span>•</span>
-            <span>SIH 2026 Problem Statement PS-24 (Doctor Availability & Hospital Intake)</span>
+            <span className="font-semibold text-slate-800">DocGenie</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600">SIH 2026 Problem Statement PS-24 (Doctor Availability & Hospital Intake)</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
             <button
               onClick={() => setIsSupabaseModalOpen(true)}
-              className="text-indigo-700 hover:text-indigo-800 font-medium cursor-pointer underline flex items-center gap-1"
+              className="text-teal-700 hover:text-teal-800 font-medium cursor-pointer underline flex items-center gap-1"
             >
               <Server className="w-3 h-3" />
               <span>Supabase Schema &amp; Env</span>
             </button>
-            <span>•</span>
+            <span className="text-slate-300">•</span>
             <button
               onClick={() => setIsSyntheticModalOpen(true)}
               className="text-amber-700 hover:text-amber-800 font-medium cursor-pointer underline flex items-center gap-1"
@@ -237,9 +242,24 @@ function DocGenieMain() {
               <Database className="w-3 h-3" />
               <span>Synthetic Data Policy</span>
             </button>
-            <span>•</span>
-            <span className="text-slate-500">
-              Role Isolation Active (PATIENT / DOCTOR)
+            <span className="text-slate-300">•</span>
+            <button
+              onClick={() => setLegalModalState({ isOpen: true, tab: 'terms' })}
+              className="text-slate-600 hover:text-slate-900 font-medium cursor-pointer underline"
+            >
+              Terms &amp; Conditions
+            </button>
+            <span className="text-slate-300">•</span>
+            <button
+              onClick={() => setLegalModalState({ isOpen: true, tab: 'privacy' })}
+              className="text-slate-600 hover:text-slate-900 font-medium cursor-pointer underline"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-500 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-slate-400" />
+              <span>Role Isolation Active (PATIENT / DOCTOR)</span>
             </span>
           </div>
         </div>
@@ -255,6 +275,13 @@ function DocGenieMain() {
       <SupabaseConfigModal
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}
+      />
+
+      {/* Legal & Patient Privacy Modal */}
+      <LegalModal
+        isOpen={legalModalState.isOpen}
+        initialTab={legalModalState.tab}
+        onClose={() => setLegalModalState((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

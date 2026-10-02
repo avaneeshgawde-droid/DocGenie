@@ -13,18 +13,18 @@ export const EmergencyDisclaimerBanner: React.FC = () => {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                Emergency Care Disclaimer &amp; Safety Notice
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-900">
+                Emergency Care Disclaimer &amp; Safety Protocol
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-200/80 text-rose-900">
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
                 Non-Autonomous AI Protocol
               </span>
             </div>
             <p className="text-xs text-rose-950 mt-1 leading-relaxed">
               <strong>Do not use this intake for medical emergencies.</strong> If you are experiencing
               sudden crushing chest pain, difficulty breathing, severe bleeding, or stroke-like numbness,
-              call emergency services (<strong>112 / 108</strong>) or report immediately to hospital
-              Emergency (Casualty).
+              call emergency services (<strong>112 / 108</strong>) or report immediately to the nearest hospital
+              Emergency (Casualty) ward.
             </p>
           </div>
         </div>
@@ -32,7 +32,7 @@ export const EmergencyDisclaimerBanner: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-rose-700 hover:text-rose-900 text-xs font-medium inline-flex items-center gap-1 shrink-0 px-2 py-1 rounded-md hover:bg-rose-100 transition-colors cursor-pointer"
+          className="text-rose-700 hover:text-rose-900 text-xs font-semibold inline-flex items-center gap-1 shrink-0 px-2 py-1 rounded-md hover:bg-rose-100 transition-colors cursor-pointer"
           aria-label={isExpanded ? 'Collapse disclaimer details' : 'Expand disclaimer details'}
         >
           <span>{isExpanded ? 'Less' : 'Details'}</span>
@@ -41,16 +41,16 @@ export const EmergencyDisclaimerBanner: React.FC = () => {
       </div>
 
       {isExpanded && (
-        <div className="mt-3 pt-3 border-t border-rose-200/70 text-[11px] text-rose-900/90 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="mt-3 pt-3 border-t border-rose-200 text-[11px] text-rose-900 grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-start gap-2">
-            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <ShieldAlert className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold block text-rose-950">No Autonomous Diagnosis</span>
               DocGenie gathers structured pre-consultation information to aid hospital OPD clinicians. It does not replace independent professional medical judgment.
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <PhoneCall className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <PhoneCall className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold block text-rose-950">Immediate Care Pathway</span>
               Casualty triage nurses will prioritize patients based on physical vitals upon in-person OPD arrival.

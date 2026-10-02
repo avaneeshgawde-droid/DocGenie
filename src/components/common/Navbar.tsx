@@ -13,7 +13,6 @@ import {
   Hospital,
   ChevronDown,
   Server,
-  Lock,
 } from 'lucide-react';
 import { AppRoute, SyntheticPatient, SyntheticDoctor, UserRole } from '../../types';
 import { config } from '../../config/env';
@@ -58,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-15 gap-4">
+        <div className="flex items-center justify-between h-16 gap-4">
           
           {/* Zone 1: Brand Wordmark */}
           <div className="flex items-center gap-3 shrink-0">
@@ -75,8 +74,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="text-base font-bold tracking-tight text-slate-900">
                     Doc<span className="text-teal-700">Genie</span>
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-                    OPD Suite
+                  <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                    SIH26047
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 hidden sm:flex items-center gap-1">
@@ -161,14 +160,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Zone 3: Actions & Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             
-            {/* System Config & Synthetic Data Indicators (Quiet Unboxed Controls) */}
+            {/* System Status Indicators (Clean unboxed metadata) */}
             <div className="hidden xl:flex items-center gap-2 text-xs text-slate-500 border-r border-slate-200 pr-3 mr-1">
               <button
                 id="supabase-status-pill-btn"
                 onClick={onOpenSupabaseModal}
-                className="hover:text-slate-900 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="hover:text-slate-900 inline-flex items-center gap-1.5 transition-colors cursor-pointer text-slate-600 font-medium"
                 title="Supabase Authentication & Database Configuration"
               >
                 <Server className="w-3.5 h-3.5 text-slate-400" />
@@ -178,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="synthetic-data-indicator-btn"
                 onClick={onOpenSyntheticModal}
-                className="hover:text-slate-900 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="hover:text-slate-900 inline-flex items-center gap-1.5 transition-colors cursor-pointer text-slate-600 font-medium"
                 title="Synthetic Healthcare Data Disclaimer"
               >
                 <Database className="w-3.5 h-3.5 text-slate-400" />
@@ -191,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="role-switcher-dropdown-btn"
                 onClick={() => setSwitchDropdownOpen(!switchDropdownOpen)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs text-slate-700 transition-colors cursor-pointer shadow-2xs"
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${
                   currentRole === 'DOCTOR' ? 'bg-teal-700' : currentRole === 'PATIENT' ? 'bg-cyan-700' : 'bg-slate-400'
@@ -200,7 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="text-[10px] text-slate-400 uppercase font-bold leading-none">
                     {currentRole}
                   </div>
-                  <div className="text-xs font-semibold leading-tight text-slate-800 max-w-[120px] truncate">
+                  <div className="text-xs font-semibold leading-tight text-slate-800 max-w-[130px] truncate">
                     {currentUser?.fullName || (currentRole === 'GUEST' ? 'Guest Visitor' : 'Signed In')}
                   </div>
                 </div>
@@ -210,9 +209,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               {switchDropdownOpen && (
                 <div
                   id="role-switcher-menu"
-                  className="absolute right-0 mt-1.5 w-72 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 z-50 animate-in fade-in duration-100"
+                  className="absolute right-0 mt-1.5 w-72 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 animate-in fade-in duration-100"
                 >
-                  <div className="px-3 py-2 border-b border-slate-100">
+                  <div className="px-3.5 py-2.5 border-b border-slate-100">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                       Active User Session
                     </p>
@@ -220,16 +219,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span className="text-xs font-bold text-slate-900">
                         {currentUser?.fullName || 'Not Signed In'}
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                         {currentRole}
                       </span>
                     </div>
                     {currentUser?.email && (
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">{currentUser.email}</p>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">{currentUser.email}</p>
                     )}
                   </div>
 
-                  <div className="px-3 pt-2 pb-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  <div className="px-3.5 pt-2.5 pb-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                     Quick Role Switch
                   </div>
 
@@ -240,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setSwitchDropdownOpen(false);
                       onRouteChange('patient_dashboard');
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-slate-50 cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center gap-2.5 hover:bg-slate-50 cursor-pointer ${
                       currentRole === 'PATIENT' ? 'text-teal-800 font-semibold bg-teal-50/50' : 'text-slate-700'
                     }`}
                   >
@@ -258,7 +257,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setSwitchDropdownOpen(false);
                       onRouteChange('doctor_dashboard');
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-slate-50 cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center gap-2.5 hover:bg-slate-50 cursor-pointer ${
                       currentRole === 'DOCTOR' ? 'text-teal-800 font-semibold bg-teal-50/50' : 'text-slate-700'
                     }`}
                   >
@@ -277,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setSwitchDropdownOpen(false);
                       onOpenSupabaseModal();
                     }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                   >
                     <Server className="w-3.5 h-3.5 text-slate-400" />
                     <span>Supabase Schema &amp; Environment</span>
@@ -287,7 +286,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       id="navbar-logout-btn"
                       onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 text-xs text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer font-medium border-t border-slate-100 mt-1"
+                      className="w-full text-left px-3.5 py-2 text-xs text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer font-medium border-t border-slate-100 mt-1"
                     >
                       <LogOut className="w-3.5 h-3.5 text-rose-600" />
                       <span>Sign Out</span>
@@ -299,7 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setSwitchDropdownOpen(false);
                         onRouteChange('patient_login');
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-teal-700 hover:bg-teal-50 flex items-center gap-2 cursor-pointer font-medium border-t border-slate-100 mt-1"
+                      className="w-full text-left px-3.5 py-2 text-xs text-teal-700 hover:bg-teal-50 flex items-center gap-2 cursor-pointer font-medium border-t border-slate-100 mt-1"
                     >
                       <LogIn className="w-3.5 h-3.5 text-teal-600" />
                       <span>Sign In</span>
@@ -315,7 +314,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="header-logout-btn"
                 onClick={handleLogout}
                 title="Log out of current session"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Logout</span>
@@ -326,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="mobile-menu-toggle-btn"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+              className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -338,7 +337,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div id="mobile-nav-panel" className="lg:hidden border-t border-slate-200 py-3 space-y-2">
-            <div className="p-3 bg-slate-50 rounded-lg mb-2 flex items-center justify-between">
+            <div className="p-3 bg-slate-50 rounded-xl mb-2 flex items-center justify-between">
               <div>
                 <div className="text-[10px] uppercase font-bold text-slate-400">Authenticated As</div>
                 <div className="text-xs font-bold text-slate-800">{currentUser?.fullName || 'Guest'}</div>
@@ -351,7 +350,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase">Navigation</div>
             <button
               onClick={() => handleNavClick('patient_dashboard')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium cursor-pointer ${
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer ${
                 currentRoute === 'patient_dashboard' ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -360,7 +359,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => handleNavClick('start_case')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium cursor-pointer ${
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer ${
                 currentRoute === 'start_case' ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -369,7 +368,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => handleNavClick('doctor_dashboard')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium cursor-pointer ${
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer ${
                 currentRoute === 'doctor_dashboard' ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -383,7 +382,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setMobileMenuOpen(false);
                   onOpenSupabaseModal();
                 }}
-                className="w-full py-2 px-3 text-xs text-slate-700 bg-slate-100 rounded-md font-medium flex items-center justify-center gap-1.5"
+                className="w-full py-2 px-3 text-xs text-slate-700 bg-slate-100 rounded-lg font-medium flex items-center justify-center gap-1.5"
               >
                 <Server className="w-3.5 h-3.5 text-slate-500" />
                 <span>Supabase Schema &amp; Environment</span>
@@ -391,7 +390,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {currentRole !== 'GUEST' && (
                 <button
                   onClick={handleLogout}
-                  className="w-full py-2 px-3 text-xs text-rose-700 bg-rose-50 rounded-md font-semibold flex items-center justify-center gap-1.5"
+                  className="w-full py-2 px-3 text-xs text-rose-700 bg-rose-50 rounded-lg font-semibold flex items-center justify-center gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Log Out</span>

@@ -13,20 +13,20 @@ export const SyntheticDataModal: React.FC<SyntheticDataModalProps> = ({ isOpen, 
   return (
     <div
       id="synthetic-data-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
     >
       <div
         id="synthetic-data-modal"
-        className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-xl overflow-hidden"
+        className="bg-white rounded-xl max-w-lg w-full border border-slate-200 shadow-xl overflow-hidden"
       >
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-teal-50/50">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-teal-600 text-white rounded-lg">
-              <Database className="w-5 h-5" />
+            <div className="w-8 h-8 bg-teal-800 text-white rounded-lg flex items-center justify-center">
+              <Database className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Synthetic / Demo Data Mode</h3>
-              <p className="text-xs text-teal-700 font-medium">Smart India Hackathon 2026 Sandbox</p>
+              <h3 className="text-sm font-bold text-slate-900">Synthetic / Demo Data Protocol</h3>
+              <p className="text-xs text-slate-500 font-medium">Smart India Hackathon 2026 Sandbox</p>
             </div>
           </div>
           <button
@@ -38,41 +38,41 @@ export const SyntheticDataModal: React.FC<SyntheticDataModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        <div className="p-6 space-y-4 text-sm text-slate-600">
+        <div className="p-6 space-y-4 text-xs text-slate-600">
           <div className="flex gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs leading-relaxed">
-              <span className="font-semibold block mb-0.5">Strict Privacy & Healthcare Compliance</span>
-              All patient records, medical identifiers (UHID), case histories, and physician names in this environment are purely synthetic and artificially generated for development and demonstration purposes. No protected health information (PHI) is collected, stored, or processed.
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-semibold block mb-0.5 text-amber-950">Strict Privacy &amp; Healthcare Compliance</span>
+              All patient records, medical identifiers (UHID), case histories, and physician names in this environment are synthetic and artificially generated for development and demonstration purposes. No protected health information (PHI) is collected, stored, or processed.
             </div>
           </div>
 
           <div className="space-y-2">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Synthetic Sandbox Features</h4>
-            <ul className="text-xs space-y-2">
+            <ul className="space-y-2 text-slate-700">
               <li className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
                 <span>Simulated Indian OPD patients (Aarav Sharma, Priya Patel, Rajesh Iyer)</span>
               </li>
               <li className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
                 <span>Mock Physician Profiles (Dr. Ananya Roy, Dr. Vikram Malhotra)</span>
               </li>
               <li className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
                 <span>Non-clinical prototype: Zero autonomous diagnosis; doctor in full control</span>
               </li>
               <li className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>AI, real-time queues, voice intake & appointments reserved for Modules 2 & 3</span>
+                <Info className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>AI, real-time queues, voice intake &amp; appointments reserved for Modules 2 &amp; 3</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-          <Button id="dismiss-synthetic-modal-btn" variant="primary" size="sm" onClick={onClose}>
-            Acknowledge & Continue
+          <Button id="dismiss-synthetic-modal-btn" variant="primary" size="sm" onClick={onClose} className="bg-teal-700 hover:bg-teal-800 text-white font-semibold">
+            Acknowledge &amp; Continue
           </Button>
         </div>
       </div>

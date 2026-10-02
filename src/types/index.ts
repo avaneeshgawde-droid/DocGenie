@@ -115,6 +115,7 @@ export interface ClinicalCase {
   doctorNotes?: string;
   verifiedAt?: string;
   assignedDoctorName?: string;
+  structuredIntakeRecord?: ValidatedStructuredIntakeRecord;
 }
 
 export interface StartCaseDraft {
@@ -151,6 +152,161 @@ export interface IntakeAnswer {
   text: string;
   isUnsure: boolean;
   updatedAt: string;
+  urgentFlags?: string[];
+}
+
+export interface IntakeChatMessage {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
+  timestamp: string;
+  sectionId?: HistorySectionId;
+  sectionTitle?: string;
+  isUnsure?: boolean;
+  urgentFlags?: string[];
+  suggestedChips?: string[];
+  contextHint?: string;
+  source?: 'gemini' | 'clinical_rules_fallback';
+}
+
+// ---------------------------------------------------------
+// Validated Structured Clinical JSON Interfaces (Module 2)
+// ---------------------------------------------------------
+
+export interface StructuredSymptomDetails {
+  description: string;
+  location: string | null;
+  severity: 'Mild' | 'Moderate' | 'Severe' | 'Unspecified';
+  characterOrQuality?: string | null;
+  progression?: string | null;
+}
+
+export interface StructuredOnsetDuration {
+  onset: string | null;
+  duration: string | null;
+  rawInput: string;
+}
+
+export interface StructuredRelevantHistory {
+  pastMedicalHistory: string | null;
+  surgicalHistory: string | null;
+  knownChronicConditions: string[];
+  patientReportedNotes: string | null;
+}
+
+export interface StructuredMedicationItem {
+  id: string;
+  name: string;
+  dosage: string | null;
+  frequency: string | null;
+  source: 'PATIENT_REPORTED' | 'PROFILE_RECORD' | 'UNSPECIFIED';
+}
+
+export interface StructuredAllergyItem {
+  id: string;
+  substance: string;
+  reaction: string | null;
+  severity: 'Mild' | 'Moderate' | 'Severe' | 'Unspecified';
+  source: 'PATIENT_REPORTED' | 'PROFILE_RECORD';
+}
+
+export interface StructuredFamilySocialHistory {
+  familyHistory: string | null;
+  lifestyleSocial: string | null;
+  habitsAndExposure: string | null;
+}
+
+export interface StructuredReferencedDocument {
+  id: string;
+  title: string;
+  documentType: 'LAB_REPORT' | 'PRESCRIPTION' | 'PRIOR_DISCHARGE' | 'IMAGING' | 'OTHER';
+  summary?: string;
+  referenceDate?: string;
+  fileSize?: string;
+}
+
+export interface StructuredUnknownMissingField {
+  id: string;
+  fieldKey: string;
+  fieldName: string;
+  reason: 'EXPLICIT_PATIENT_UNSURE' | 'NOT_REPORTED_BY_PATIENT' | 'NO_PRIOR_RECORD' | 'INCOMPLETE_INPUT';
+  inquiryPrompt: string;
+  status: 'PENDING_PHYSICIAN_CLARIFICATION';
+}
+
+export interface StructuredReviewFlagItem {
+  id: string;
+  flag: string;
+  category: 'RED_FLAG' | 'URGENCY' | 'ALLERGY_ALERT' | 'CLINICAL_REVIEW';
+  severity: 'immediate' | 'urgent' | 'caution' | 'routine';
+  detectedFrom: string;
+  clinicalActionRecommended: string;
+}
+
+export interface StructuredAiGeneratedSummary {
+  clinicalNarrative: string;
+  chiefFindings: string[];
+  suggestedClinicalFocus: string[];
+  disclaimer: string;
+  diagnosticClaim: 'NONE';
+}
+
+export interface StructuredSourceProvenance {
+  dataProvenance: 'PATIENT_REPORTED' | 'AI_GENERATED';
+  intakeChannel: 'DocGenie Conversational Intake Portal';
+  modelUsed: string;
+  promptVersion: string;
+  extractionEngine: 'DocGenie Clinical Parser v1.0.0';
+  isPatientVerified: boolean;
+}
+
+export interface StructuredTimestampsVersion {
+  schemaVersion: '1.0.0';
+  intakeCompletedAt: string;
+  conversionTimestamp: string;
+  lastModified: string;
+}
+
+export interface StructuredValidationStatus {
+  isValid: boolean;
+  schemaCompliant: boolean;
+  validatedAt: string;
+  checkedFieldsCount: number;
+  missingDataGuessed: false;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ValidatedStructuredIntakeRecord {
+  id: string;
+  caseId?: string;
+  patientId: string;
+  uhid: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: string;
+  department: string;
+  chiefComplaint: string;
+  onsetDuration: StructuredOnsetDuration;
+  symptomDetails: StructuredSymptomDetails;
+  associatedSymptoms: string[];
+  relevantHistory: StructuredRelevantHistory;
+  medications: StructuredMedicationItem[];
+  allergies: StructuredAllergyItem[];
+  familySocialHistory: StructuredFamilySocialHistory;
+  referencedDocuments: StructuredReferencedDocument[];
+  unknownMissingFields: StructuredUnknownMissingField[];
+  reviewFlags: StructuredReviewFlagItem[];
+  aiGeneratedSummary: StructuredAiGeneratedSummary;
+  sourceProvenance: StructuredSourceProvenance;
+  timestampsVersion: StructuredTimestampsVersion;
+  validationStatus: StructuredValidationStatus;
+  supabaseSyncStatus?: {
+    isSynced: boolean;
+    syncedAt?: string;
+    targetTable: string;
+    notice?: string;
+  };
 }
 
 export interface IntakeConversationDraft {
@@ -163,5 +319,10 @@ export interface IntakeConversationDraft {
   isSubmitted: boolean;
   createdCaseId?: string;
   lastSavedAt: string;
+  reviewFlags?: string[];
+  conversationMessages?: IntakeChatMessage[];
+  structuredRecord?: ValidatedStructuredIntakeRecord;
+  referencedDocuments?: StructuredReferencedDocument[];
 }
+
 

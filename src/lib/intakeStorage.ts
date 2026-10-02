@@ -61,6 +61,9 @@ export async function getIntakeDraftAsync(patientId: string): Promise<IntakeConv
       isSubmitted: Boolean(data.is_submitted),
       createdCaseId: data.created_case_id || undefined,
       lastSavedAt: data.last_saved_at || new Date().toISOString(),
+      reviewFlags: data.review_flags || (data.answers?._reviewFlags) || [],
+      conversationMessages: data.conversation_messages || (data.answers?._conversationMessages) || [],
+      structuredRecord: data.structured_record || undefined,
     };
 
     // If cloudDraft is newer or has answers, keep local in sync
@@ -112,6 +115,7 @@ export function saveIntakeDraft(draft: IntakeConversationDraft): void {
           is_review_mode: Boolean(draft.isReviewMode),
           is_submitted: Boolean(draft.isSubmitted),
           created_case_id: draft.createdCaseId || null,
+          structured_record: dataToSave.structuredRecord || null,
           last_saved_at: dataToSave.lastSavedAt,
         })
     )

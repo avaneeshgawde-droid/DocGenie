@@ -19,8 +19,8 @@ export const Card: React.FC<CardProps> = ({
     <div
       id={id}
       onClick={onClick}
-      className={`bg-white rounded-xl border border-slate-200/80 shadow-xs ${
-        hoverable ? 'hover:border-teal-300 hover:shadow-md transition-all cursor-pointer' : ''
+      className={`bg-white rounded-lg border border-slate-200 shadow-xs ${
+        hoverable ? 'hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer' : ''
       } ${className}`}
     >
       {children}
@@ -37,11 +37,11 @@ export const CardHeader: React.FC<{
 }> = ({ title, subtitle, action, className = '', id }) => (
   <div
     id={id}
-    className={`p-5 border-b border-slate-100 flex items-start justify-between gap-4 ${className}`}
+    className={`px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-4 ${className}`}
   >
     <div>
-      <h3 className="text-base font-semibold text-slate-900 leading-snug">{title}</h3>
-      {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+      <h3 className="text-sm font-bold text-slate-900 leading-snug tracking-tight">{title}</h3>
+      {subtitle && <p className="text-xs text-slate-500 mt-0.5 leading-normal">{subtitle}</p>}
     </div>
     {action && <div className="shrink-0">{action}</div>}
   </div>
@@ -64,7 +64,7 @@ export const CardFooter: React.FC<{
 }> = ({ children, className = '', id }) => (
   <div
     id={id}
-    className={`p-4 bg-slate-50/70 border-t border-slate-100 rounded-b-xl flex items-center justify-between gap-3 ${className}`}
+    className={`px-5 py-3.5 bg-slate-50/60 border-t border-slate-100 rounded-b-xl flex items-center justify-between gap-3 ${className}`}
   >
     {children}
   </div>

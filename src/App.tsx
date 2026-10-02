@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { AppRoute, SyntheticPatient, SyntheticDoctor, ClinicalCase } from './types';
 import { SYNTHETIC_CASES, SYNTHETIC_PATIENTS, SYNTHETIC_DOCTORS } from './data/mockData';
 import { getStoredCases, fetchStoredCasesAsync, saveStoredCase, saveStoredCases } from './lib/caseStorage';
+import { getIntakeDraft, clearIntakeDraft } from './lib/intakeStorage';
 import { DisclaimerBanner } from './components/common/DisclaimerBanner';
 import { Navbar } from './components/common/Navbar';
 import { SyntheticDataModal } from './components/common/SyntheticDataModal';
@@ -44,6 +45,13 @@ function DocGenieMain() {
   });
 
   const handleNavigate = (route: AppRoute) => {
+    if (route === 'start_case') {
+      const patientId = activePatient?.id || SYNTHETIC_PATIENTS[0].id;
+      const existingDraft = getIntakeDraft(patientId);
+      if (existingDraft?.isSubmitted) {
+        clearIntakeDraft(patientId);
+      }
+    }
     setCurrentRoute(route);
     if (typeof window !== 'undefined') {
       try {

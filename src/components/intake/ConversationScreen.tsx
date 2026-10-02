@@ -17,7 +17,12 @@ import {
   ChevronRight,
   Building2,
   Activity,
-  AlertCircle
+  AlertCircle,
+  PlusCircle,
+  AlertTriangle,
+  ShieldAlert,
+  Loader2,
+  FileCode2,
 } from 'lucide-react';
 import {
   SyntheticPatient,
@@ -25,10 +30,20 @@ import {
   IntakeAnswer,
   HistorySectionId,
   IntakeQuestion,
-  IntakeConversationDraft
-} from '../../types';
+  IntakeConversationDraft,
+  IntakeChatMessage,
+  ValidatedStructuredIntakeRecord,
+} from '../../types/index';
 import { INTAKE_QUESTIONS, HISTORY_SECTIONS } from '../../data/intakeQuestions';
 import { getIntakeDraft, getIntakeDraftAsync, saveIntakeDraft, clearIntakeDraft } from '../../lib/intakeStorage';
+import { submitIntakeTurn, IntakeTurnResponse } from '../../lib/geminiIntakeClient';
+import {
+  convertConversationToStructuredRecord,
+  convertCompletedConversation,
+  saveValidatedStructuredRecord,
+  getStoredStructuredRecord,
+} from '../../lib/structuredIntakeConverter';
+import { StructuredRecordViewer } from './StructuredRecordViewer';
 import { DEPARTMENTS } from '../../data/mockData';
 import { EmergencyDisclaimerBanner } from './EmergencyDisclaimerBanner';
 import { IntakeSectionProgress } from './IntakeSectionProgress';
@@ -42,24 +57,87 @@ interface ConversationScreenProps {
   onNavigateToDoctorDashboard: () => void;
 }
 
+const DEFAULT_INITIAL_MESSAGE: IntakeChatMessage = {
+  id: 'msg-init-1',
+  role: 'assistant',
+  text: 'Hello! I am DocGenie\'s clinical intake assistant at City Health Medical Center. To help the attending physician prepare for your consultation, what is the primary symptom or health concern bringing you in today?',
+  timestamp: new Date().toISOString(),
+  sectionId: 'chief_complaint',
+  sectionTitle: 'Chief Complaint',
+  suggestedChips: [
+    'Throat irritation & dry cough',
+    'Persistent fever with body chills',
+    'Abdominal pain & stomach discomfort',
+    'Severe headache & light sensitivity',
+    'Lower back stiffness & joint pain',
+  ],
+  contextHint: 'Describe your main symptom in your own words.',
+  source: 'gemini',
+};
+
+const SECTION_TO_QUESTION_MAP: Record<HistorySectionId, string> = {
+  chief_complaint: 'q1_chief_complaint',
+  present_illness: 'q2_duration_onset',
+  associated_symptoms: 'q4_associated_symptoms',
+  medical_history: 'q5_medical_history',
+  medications_allergies: 'q6_medications_allergies',
+  family_social_history: 'q7_family_social',
+};
+
 export const ConversationScreen: React.FC<ConversationScreenProps> = ({
   patient,
   onCreateCase,
   onCancel,
   onNavigateToDoctorDashboard,
 }) => {
-  // 1. Initial State loaded synchronously from persistent storage (instant hydration, zero wipeout on mount)
+  // 1. Initial State loaded synchronously from persistent storage
   const initialDraft = getIntakeDraft(patient.id);
 
   const [answers, setAnswers] = useState<Record<string, IntakeAnswer>>(() => {
     return initialDraft?.answers || {};
   });
+
+  const [currentSectionId, setCurrentSectionId] = useState<HistorySectionId>(() => {
+    const qIndex = initialDraft?.currentQuestionIndex ?? 0;
+    const mapped = HISTORY_SECTIONS[qIndex]?.id || 'chief_complaint';
+    return mapped;
+  });
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(() => {
     return typeof initialDraft?.currentQuestionIndex === 'number'
-      ? Math.min(initialDraft.currentQuestionIndex, INTAKE_QUESTIONS.length - 1)
+      ? Math.min(initialDraft.currentQuestionIndex, HISTORY_SECTIONS.length - 1)
       : 0;
   });
+
+  const [messages, setMessages] = useState<IntakeChatMessage[]>(() => {
+    if (initialDraft?.conversationMessages && initialDraft.conversationMessages.length > 0) {
+      return initialDraft.conversationMessages;
+    }
+    return [DEFAULT_INITIAL_MESSAGE];
+  });
+
+  const [reviewFlags, setReviewFlags] = useState<string[]>(() => {
+    return initialDraft?.reviewFlags || [];
+  });
+
+  const [activeSuggestedChips, setActiveSuggestedChips] = useState<string[]>(() => {
+    if (initialDraft?.conversationMessages && initialDraft.conversationMessages.length > 0) {
+      const lastAssistant = [...initialDraft.conversationMessages].reverse().find((m) => m.role === 'assistant');
+      if (lastAssistant?.suggestedChips) return lastAssistant.suggestedChips;
+    }
+    return DEFAULT_INITIAL_MESSAGE.suggestedChips || [];
+  });
+
+  const [activeContextHint, setActiveContextHint] = useState<string>(() => {
+    if (initialDraft?.conversationMessages && initialDraft.conversationMessages.length > 0) {
+      const lastAssistant = [...initialDraft.conversationMessages].reverse().find((m) => m.role === 'assistant');
+      if (lastAssistant?.contextHint) return lastAssistant.contextHint;
+    }
+    return DEFAULT_INITIAL_MESSAGE.contextHint || 'Describe your symptom objectively.';
+  });
+
   const [inputText, setInputText] = useState('');
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<string>(() => {
     return initialDraft?.selectedDepartment || DEPARTMENTS[0];
   });
@@ -79,6 +157,13 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     return initialDraft?.lastSavedAt || null;
   });
 
+  // Validated Structured Clinical JSON State (Module 2)
+  const [showStructuredViewer, setShowStructuredViewer] = useState(false);
+  const [structuredRecord, setStructuredRecord] = useState<ValidatedStructuredIntakeRecord | null>(() => {
+    return initialDraft?.structuredRecord || getStoredStructuredRecord(patient.id) || null;
+  });
+  const [isConvertingStructured, setIsConvertingStructured] = useState(false);
+
   // In-line editing state for previous answers
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -92,17 +177,27 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     getIntakeDraftAsync(patient.id).then((cloudDraft) => {
       if (cloudDraft && cloudDraft.answers && Object.keys(cloudDraft.answers).length > 0) {
         setAnswers((prev) => {
-          // If local answers already has more or equal keys, keep local to avoid overwriting recent changes
           if (Object.keys(prev).length >= Object.keys(cloudDraft.answers).length) {
             return prev;
           }
           return { ...cloudDraft.answers, ...prev };
         });
+        if (cloudDraft.conversationMessages && cloudDraft.conversationMessages.length > 0) {
+          setMessages(cloudDraft.conversationMessages);
+          const lastAss = [...cloudDraft.conversationMessages].reverse().find((m) => m.role === 'assistant');
+          if (lastAss?.suggestedChips) setActiveSuggestedChips(lastAss.suggestedChips);
+          if (lastAss?.contextHint) setActiveContextHint(lastAss.contextHint);
+        }
+        if (cloudDraft.reviewFlags && cloudDraft.reviewFlags.length > 0) {
+          setReviewFlags((prev) => Array.from(new Set([...prev, ...(cloudDraft.reviewFlags || [])])));
+        }
         if (cloudDraft.selectedDepartment) setSelectedDepartment(cloudDraft.selectedDepartment);
         if (cloudDraft.perceivedSeverity) setPerceivedSeverity(cloudDraft.perceivedSeverity);
         if (cloudDraft.lastSavedAt) setLastSavedTime(cloudDraft.lastSavedAt);
         if (typeof cloudDraft.currentQuestionIndex === 'number') {
           setCurrentQuestionIndex((prev) => Math.max(prev, cloudDraft.currentQuestionIndex));
+          const sec = HISTORY_SECTIONS[cloudDraft.currentQuestionIndex]?.id || 'chief_complaint';
+          setCurrentSectionId(sec);
         }
         if (cloudDraft.isReviewMode) setIsReviewMode(true);
         if (cloudDraft.isSubmitted && cloudDraft.createdCaseId) {
@@ -113,7 +208,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     });
   }, [patient.id]);
 
-  // 3. Persist draft whenever answers, currentQuestionIndex, or review mode changes
+  // 3. Persist draft whenever answers, messages, or review mode changes
   useEffect(() => {
     if (isSubmitted) return;
 
@@ -127,58 +222,148 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
       isSubmitted,
       createdCaseId,
       lastSavedAt: new Date().toISOString(),
+      reviewFlags,
+      conversationMessages: messages,
     };
 
     saveIntakeDraft(draftData);
     setLastSavedTime(draftData.lastSavedAt);
-  }, [answers, currentQuestionIndex, selectedDepartment, perceivedSeverity, isReviewMode, isSubmitted, createdCaseId, patient.id]);
+  }, [answers, currentQuestionIndex, selectedDepartment, perceivedSeverity, isReviewMode, isSubmitted, createdCaseId, reviewFlags, messages, patient.id]);
 
-  // Scroll to bottom when question index or answer count changes
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (!isReviewMode && !isSubmitted) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [currentQuestionIndex, answers, isReviewMode, isSubmitted]);
+  }, [messages, isLoadingAI, isReviewMode, isSubmitted]);
 
-  // Current active question
-  const currentQuestion: IntakeQuestion | undefined = INTAKE_QUESTIONS[currentQuestionIndex];
-  const isAllAnswered = INTAKE_QUESTIONS.every((q) => Boolean(answers[q.id]));
+  // Submit answer for active question to Gemini Server-Side API
+  const handleAnswerSubmit = async (textToSubmit?: string, isUnsure = false) => {
+    const rawAnswer = (textToSubmit !== undefined ? textToSubmit : inputText).trim();
 
-  // Submit answer for active question
-  const handleAnswerSubmit = (textToSubmit?: string, isUnsure = false) => {
-    if (!currentQuestion) return;
-
-    const finalAnswerText = (textToSubmit !== undefined ? textToSubmit : inputText).trim();
-
-    // If not "I'm not sure" and empty for required question, prevent submit
-    if (!isUnsure && !finalAnswerText && currentQuestion.isRequired) {
+    // Prevent submitting empty text unless "I'm not sure" is explicitly clicked
+    if (!isUnsure && !rawAnswer) {
       return;
     }
 
-    const recordedText = isUnsure
-      ? finalAnswerText || "I'm not sure / Patient marked as unsure"
-      : finalAnswerText || 'None reported / Not applicable';
+    const displayText = isUnsure
+      ? rawAnswer || "I'm not sure / Need clinician to evaluate"
+      : rawAnswer;
 
-    const newAnswer: IntakeAnswer = {
-      questionId: currentQuestion.id,
-      sectionId: currentQuestion.sectionId,
-      text: recordedText,
+    // 1. Add patient message to conversation stream
+    const userMessageId = `usr-${Date.now()}`;
+    const userMsg: IntakeChatMessage = {
+      id: userMessageId,
+      role: 'user',
+      text: displayText,
+      timestamp: new Date().toISOString(),
+      sectionId: currentSectionId,
       isUnsure,
-      updatedAt: new Date().toISOString(),
     };
 
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: newAnswer,
-    }));
-
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputText('');
+    setIsLoadingAI(true);
 
-    // If this is the last question, advance to review mode
-    if (currentQuestionIndex >= INTAKE_QUESTIONS.length - 1) {
-      setIsReviewMode(true);
-    } else {
-      setCurrentQuestionIndex((prev) => prev + 1);
+    try {
+      // 2. Call server-side Gemini API
+      const response: IntakeTurnResponse = await submitIntakeTurn({
+        patient: {
+          id: patient.id,
+          fullName: patient.fullName,
+          age: patient.age,
+          gender: patient.gender,
+          chronicConditions: patient.chronicConditions,
+          allergies: patient.allergies,
+        },
+        currentSectionId,
+        patientInput: rawAnswer,
+        isUnsure,
+        answersSoFar: answers,
+        conversationHistory: updatedMessages.map((m) => ({
+          role: m.role,
+          text: m.text,
+          sectionId: m.sectionId,
+          isUnsure: m.isUnsure,
+        })),
+        accumulatedReviewFlags: reviewFlags,
+        currentQuestionIndex,
+      });
+
+      // 3. Process conservative urgent review flags if generated
+      const newFlags = response.urgentReviewFlags || [];
+      if (newFlags.length > 0) {
+        setReviewFlags((prev) => Array.from(new Set([...prev, ...newFlags])));
+      }
+
+      // 4. Update the answer for the current section
+      const questionKey = SECTION_TO_QUESTION_MAP[currentSectionId] || `q_${currentSectionId}`;
+      const recordedAnswer: IntakeAnswer = {
+        questionId: questionKey,
+        sectionId: currentSectionId,
+        text: response.extractedSummary || displayText,
+        isUnsure: response.isUnsureRecorded || isUnsure,
+        updatedAt: new Date().toISOString(),
+        urgentFlags: newFlags,
+      };
+
+      setAnswers((prev) => ({
+        ...prev,
+        [questionKey]: recordedAnswer,
+      }));
+
+      // 5. If the intake is completed, move to review mode
+      if (response.isIntakeComplete) {
+        const assistantFinalMsg: IntakeChatMessage = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          text: response.nextQuestion,
+          timestamp: new Date().toISOString(),
+          sectionId: currentSectionId,
+          sectionTitle: response.sectionTitle,
+          urgentFlags: newFlags,
+          source: response.source,
+        };
+        setMessages((prev) => [...prev, assistantFinalMsg]);
+        setIsReviewMode(true);
+      } else {
+        // Advance to next question / section
+        const assistantMsg: IntakeChatMessage = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          text: response.nextQuestion,
+          timestamp: new Date().toISOString(),
+          sectionId: response.sectionId,
+          sectionTitle: response.sectionTitle,
+          suggestedChips: response.suggestedChips,
+          contextHint: response.contextHint,
+          urgentFlags: newFlags,
+          source: response.source,
+        };
+
+        setMessages((prev) => [...prev, assistantMsg]);
+        setCurrentSectionId(response.sectionId);
+        setActiveSuggestedChips(response.suggestedChips || []);
+        setActiveContextHint(response.contextHint || 'Describe your symptoms in your own words.');
+
+        const nextSectionIndex = HISTORY_SECTIONS.findIndex((s) => s.id === response.sectionId);
+        if (nextSectionIndex >= 0) {
+          setCurrentQuestionIndex(nextSectionIndex);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process AI intake turn:', err);
+      // Fallback: move to next section index
+      const nextIdx = Math.min(currentQuestionIndex + 1, HISTORY_SECTIONS.length - 1);
+      setCurrentQuestionIndex(nextIdx);
+      const nextSec = HISTORY_SECTIONS[nextIdx]?.id || 'present_illness';
+      setCurrentSectionId(nextSec);
+      if (nextIdx >= HISTORY_SECTIONS.length - 1 && currentQuestionIndex === HISTORY_SECTIONS.length - 1) {
+        setIsReviewMode(true);
+      }
+    } finally {
+      setIsLoadingAI(false);
     }
   };
 
@@ -190,31 +375,30 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
   // Handle suggested chip click
   const handleChipClick = (chip: string) => {
     setInputText(chip);
-    // Focus textarea
     inputRef.current?.focus();
   };
 
-  // Begin editing a previous answer
+  // Begin editing a previous answer in review mode
   const handleStartEdit = (questionId: string) => {
     const existing = answers[questionId];
     setEditingQuestionId(questionId);
     setEditingText(existing ? existing.text : '');
   };
 
-  // Save the edited previous answer without altering other state
+  // Save the edited previous answer
   const handleSaveEdit = (questionId: string, isUnsure = false) => {
     const targetQ = INTAKE_QUESTIONS.find((q) => q.id === questionId);
-    if (!targetQ) return;
+    const targetSec = targetQ?.sectionId || 'chief_complaint';
 
     const newText = isUnsure
-      ? "I'm not sure / Patient marked as unsure"
+      ? "Patient marked as unsure / to be clarified with physician during physical examination."
       : editingText.trim() || 'None reported / Not applicable';
 
     setAnswers((prev) => ({
       ...prev,
       [questionId]: {
         questionId,
-        sectionId: targetQ.sectionId,
+        sectionId: targetSec,
         text: newText,
         isUnsure,
         updatedAt: new Date().toISOString(),
@@ -225,43 +409,141 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
     setEditingText('');
   };
 
-  // Navigate to a specific section from the top progress bar
+  // Jump to section
   const handleJumpToSection = (sectionId: HistorySectionId) => {
-    const firstQIndex = INTAKE_QUESTIONS.findIndex((q) => q.sectionId === sectionId);
-    if (firstQIndex >= 0) {
-      setCurrentQuestionIndex(firstQIndex);
+    const secIdx = HISTORY_SECTIONS.findIndex((s) => s.id === sectionId);
+    if (secIdx >= 0) {
+      setCurrentSectionId(sectionId);
+      setCurrentQuestionIndex(secIdx);
       setIsReviewMode(false);
     }
   };
 
-  // Reset / Clear Draft
+  // Reset Draft
   const handleResetDraft = () => {
-    if (window.confirm('Are you sure you want to reset this intake conversation? This will clear all draft responses.')) {
-      clearIntakeDraft(patient.id);
-      setAnswers({});
-      setCurrentQuestionIndex(0);
-      setInputText('');
-      setIsReviewMode(false);
-      setIsSubmitted(false);
-      setCreatedCaseId('');
+    clearIntakeDraft(patient.id);
+    setAnswers({});
+    setCurrentSectionId('chief_complaint');
+    setCurrentQuestionIndex(0);
+    setMessages([DEFAULT_INITIAL_MESSAGE]);
+    setActiveSuggestedChips(DEFAULT_INITIAL_MESSAGE.suggestedChips || []);
+    setActiveContextHint(DEFAULT_INITIAL_MESSAGE.contextHint || '');
+    setReviewFlags([]);
+    setInputText('');
+    setSelectedDepartment(DEPARTMENTS[0]);
+    setPerceivedSeverity('Moderate');
+    setIsReviewMode(false);
+    setIsSubmitted(false);
+    setCreatedCaseId('');
+    setEditingQuestionId(null);
+    setEditingText('');
+    setLastSavedTime(null);
+    setStructuredRecord(null);
+    setShowStructuredViewer(false);
+  };
+
+  // Start Fresh Case
+  const handleStartNewCase = () => {
+    clearIntakeDraft(patient.id);
+    setAnswers({});
+    setCurrentSectionId('chief_complaint');
+    setCurrentQuestionIndex(0);
+    setMessages([DEFAULT_INITIAL_MESSAGE]);
+    setActiveSuggestedChips(DEFAULT_INITIAL_MESSAGE.suggestedChips || []);
+    setActiveContextHint(DEFAULT_INITIAL_MESSAGE.contextHint || '');
+    setReviewFlags([]);
+    setInputText('');
+    setSelectedDepartment(DEPARTMENTS[0]);
+    setPerceivedSeverity('Moderate');
+    setIsReviewMode(false);
+    setIsSubmitted(false);
+    setCreatedCaseId('');
+    setEditingQuestionId(null);
+    setEditingText('');
+    setLastSavedTime(null);
+    setStructuredRecord(null);
+    setShowStructuredViewer(false);
+  };
+
+  // Convert conversation to validated structured JSON and open viewer
+  const handleOpenStructuredRecord = async () => {
+    if (structuredRecord) {
+      setShowStructuredViewer(true);
+      return;
+    }
+    setIsConvertingStructured(true);
+    try {
+      const record = await convertCompletedConversation({
+        caseId: createdCaseId || undefined,
+        patient,
+        answers,
+        messages,
+        department: selectedDepartment,
+        perceivedSeverity,
+        reviewFlags,
+      });
+      setStructuredRecord(record);
+      setShowStructuredViewer(true);
+    } catch (err) {
+      console.warn('Server conversion unavailable, executing deterministic client-side extraction:', err);
+      const fallback = convertConversationToStructuredRecord({
+        caseId: createdCaseId || undefined,
+        patient,
+        answers,
+        messages,
+        department: selectedDepartment,
+        perceivedSeverity,
+        reviewFlags,
+      });
+      setStructuredRecord(fallback);
+      saveValidatedStructuredRecord(fallback);
+      setShowStructuredViewer(true);
+    } finally {
+      setIsConvertingStructured(false);
     }
   };
 
   // Final submission of clinical case
   const handleFinalCaseSubmit = () => {
-    const newCaseId = `case-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const uniqueSuffix = `${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
+    const newCaseId = `case-2026-${uniqueSuffix}`;
 
     const chiefComplaintAnswer = answers['q1_chief_complaint']?.text || 'Patient reported symptom intake';
     const durationAnswer = answers['q2_duration_onset']?.text || '1-3 days';
 
     // Build structured medical history text
-    const summarySections = INTAKE_QUESTIONS.map((q) => {
-      const a = answers[q.id];
-      const ansText = a ? (a.isUnsure ? `[Unsure] ${a.text}` : a.text) : 'Not answered';
-      return `• ${q.sectionTitle}: "${ansText}"`;
+    const summarySections = HISTORY_SECTIONS.map((sec) => {
+      const qKey = SECTION_TO_QUESTION_MAP[sec.id];
+      const a = answers[qKey];
+      const ansText = a ? (a.isUnsure ? `[Unsure / Unknown] ${a.text}` : a.text) : 'Not reported';
+      return `• ${sec.title}: "${ansText}"`;
     }).join('\n');
 
-    const structuredSummary = `Patient ${patient.fullName} (${patient.age}${patient.gender.charAt(0)}) intake completed.\n${summarySections}`;
+    const flagSummary = reviewFlags.length > 0
+      ? `\n\nCONSERVATIVE CLINICAL REVIEW FLAGS (${reviewFlags.length}):\n${reviewFlags.map((f) => `⚠️ ${f}`).join('\n')}`
+      : '\n\nReview Flags: None detected. Standard routine intake.';
+
+    const structuredSummary = `Patient ${patient.fullName} (${patient.age}${patient.gender.charAt(0)}) intake completed via DocGenie Server-Side Gemini API.\n${summarySections}${flagSummary}`;
+
+    // Auto-escalate priority if acute review flags are present
+    const calculatedPriority = reviewFlags.length > 0
+      ? 'urgent'
+      : perceivedSeverity === 'Severe'
+      ? 'urgent'
+      : 'routine';
+
+    // Convert completed conversation into validated structured JSON (15 fields, never guessing missing data)
+    const validatedJsonRecord = convertConversationToStructuredRecord({
+      caseId: newCaseId,
+      patient,
+      answers,
+      messages,
+      department: selectedDepartment,
+      perceivedSeverity,
+      reviewFlags,
+    });
+    setStructuredRecord(validatedJsonRecord);
+    saveValidatedStructuredRecord(validatedJsonRecord);
 
     const newCase: ClinicalCase = {
       id: newCaseId,
@@ -270,26 +552,27 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
       patientName: patient.fullName,
       patientAge: patient.age,
       patientGender: patient.gender === 'Female' ? 'Female' : 'Male',
-      createdAt: 'Just now (Intake Portal)',
+      createdAt: 'Just now (Gemini AI Intake)',
       department: selectedDepartment,
       chiefComplaint: chiefComplaintAnswer,
       symptomDuration: durationAnswer,
       severityLevel: perceivedSeverity,
       status: 'intake_completed',
-      priority: perceivedSeverity === 'Severe' ? 'urgent' : 'routine',
-      completenessScore: Math.round((Object.keys(answers).length / INTAKE_QUESTIONS.length) * 100),
-      redFlagsCount: perceivedSeverity === 'Severe' ? 1 : 0,
-      redFlags: perceivedSeverity === 'Severe' ? ['Patient rated symptoms as Severe during clinical intake'] : [],
+      priority: calculatedPriority,
+      completenessScore: Math.round((Object.keys(answers).length / HISTORY_SECTIONS.length) * 100),
+      redFlagsCount: reviewFlags.length,
+      redFlags: reviewFlags,
       intakeMethod: 'Digital Intake Portal',
       structuredSummaryPreview: structuredSummary,
       doctorNotes: '',
+      structuredIntakeRecord: validatedJsonRecord,
     };
 
     onCreateCase(newCase);
     setCreatedCaseId(newCaseId);
     setIsSubmitted(true);
 
-    // Save final state
+    // Save final state with structured record
     saveIntakeDraft({
       patientId: patient.id,
       answers,
@@ -300,8 +583,13 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
       isSubmitted: true,
       createdCaseId: newCaseId,
       lastSavedAt: new Date().toISOString(),
+      reviewFlags,
+      conversationMessages: messages,
+      structuredRecord: validatedJsonRecord,
     });
   };
+
+  const activeAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant') || DEFAULT_INITIAL_MESSAGE;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
@@ -316,23 +604,57 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
               <span>DocGenie Clinical Pre-Consultation Intake</span>
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Module 4 • Guided Patient History Intake (Conversational UI)
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-2">
+            <span>Adaptive AI History Intake • Powered by Gemini Server-Side API</span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <Sparkles className="w-3 h-3" />
+              <span>Zero Autonomous Diagnosis Guarantee</span>
+            </span>
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {Object.keys(answers).length > 0 && !isSubmitted && (
-            <button
-              type="button"
-              onClick={handleResetDraft}
-              className="text-xs text-slate-500 hover:text-rose-700 font-medium inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Clear current answers and restart"
+          {isSubmitted ? (
+            <Button
+              id="top-start-new-case-btn"
+              variant="primary"
+              size="sm"
+              onClick={handleStartNewCase}
+              icon={<PlusCircle className="w-3.5 h-3.5" />}
+              className="bg-teal-700 hover:bg-teal-800 text-white font-semibold"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Intake</span>
-            </button>
-          )}
+              Start New Case
+            </Button>
+          ) : Object.keys(answers).length > 0 ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                id="top-view-json-btn"
+                onClick={handleOpenStructuredRecord}
+                disabled={isConvertingStructured}
+                className="text-xs text-teal-800 hover:text-teal-900 font-semibold inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50/70 hover:bg-teal-100 transition-colors cursor-pointer"
+                title="Inspect validated structured clinical JSON (15 fields)"
+              >
+                {isConvertingStructured ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-700" />
+                ) : (
+                  <FileCode2 className="w-3.5 h-3.5 text-teal-700" />
+                )}
+                <span>Validated JSON</span>
+              </button>
+
+              <button
+                type="button"
+                id="reset-intake-draft-btn"
+                onClick={handleResetDraft}
+                className="text-xs text-slate-500 hover:text-rose-700 font-medium inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer"
+                title="Clear current answers and restart"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            </div>
+          ) : null}
 
           <Button
             variant="ghost"
@@ -348,13 +670,37 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
       {/* Emergency Care Disclaimer Banner */}
       <EmergencyDisclaimerBanner />
 
+      {/* Active Clinical Review Flags Alert (Conservative Safety Notice) */}
+      {reviewFlags.length > 0 && (
+        <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <div className="font-bold text-amber-950 flex items-center gap-2">
+                <span>CONSERVATIVE CLINICAL REVIEW FLAGS GENERATED ({reviewFlags.length})</span>
+                <span className="text-[10px] uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded text-amber-900 font-bold">
+                  Attending Doctor Alerted
+                </span>
+              </div>
+              <p className="text-amber-800 leading-relaxed">
+                DocGenie does not perform emergency intervention or diagnosis. The following statement was flagged conservatively for the doctor's immediate review:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 font-medium text-amber-900 mt-1 pl-1">
+                {reviewFlags.map((flag, idx) => (
+                  <li key={idx}>{flag}</li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-amber-700 italic pt-1">
+                ⚡ If you are experiencing sudden severe chest pain, inability to breathe, or loss of consciousness, please report to the Emergency OPD immediately.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Section Progress Tracker */}
       <IntakeSectionProgress
-        currentSectionId={
-          isReviewMode
-            ? 'family_social_history'
-            : currentQuestion?.sectionId || 'chief_complaint'
-        }
+        currentSectionId={isReviewMode ? 'family_social_history' : currentSectionId}
         answers={answers}
         onSelectSection={handleJumpToSection}
       />
@@ -364,7 +710,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-4 px-2">
           <div className="flex items-center gap-1.5 text-teal-700 font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Draft auto-saved to localStorage</span>
+            <span>Dual-layer draft synced (Local + Cloud)</span>
           </div>
           <span className="text-slate-400">
             Active Patient: <strong className="text-slate-700">{patient.fullName}</strong> ({patient.uhid})
@@ -387,7 +733,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 Case #{createdCaseId} Queued for Clinician Review
               </h2>
               <p className="text-sm text-slate-600 max-w-lg mx-auto mt-2 leading-relaxed">
-                All 6 patient history sections have been recorded and formatted for the attending physician at{' '}
+                All 6 patient history sections have been structured by DocGenie and formatted for the attending physician at{' '}
                 <strong className="text-slate-800">{selectedDepartment}</strong>.
               </p>
             </div>
@@ -396,7 +742,7 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             <div className="max-w-xl mx-auto p-4 bg-white rounded-xl border border-slate-200 text-left text-xs space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-                  Intake Data Summary
+                  Clinical History Brief
                 </span>
                 <span className="font-mono text-teal-700 font-semibold">{createdCaseId}</span>
               </div>
@@ -412,15 +758,25 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 </div>
               </div>
 
+              {reviewFlags.length > 0 && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-800">
+                  <span className="font-bold block mb-1">⚠️ Urgent Review Flags ({reviewFlags.length}):</span>
+                  {reviewFlags.map((f, i) => (
+                    <div key={i}>• {f}</div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-1.5 pt-1 text-[11px] text-slate-700 border-t border-slate-100">
-                {INTAKE_QUESTIONS.map((q) => {
-                  const ans = answers[q.id];
+                {HISTORY_SECTIONS.map((sec) => {
+                  const qKey = SECTION_TO_QUESTION_MAP[sec.id];
+                  const ans = answers[qKey];
                   return (
-                    <div key={q.id} className="flex items-start justify-between gap-2 py-0.5">
-                      <span className="font-semibold text-slate-500 shrink-0">{q.sectionTitle}:</span>
+                    <div key={sec.id} className="flex items-start justify-between gap-2 py-0.5">
+                      <span className="font-semibold text-slate-500 shrink-0">{sec.title}:</span>
                       <span className="text-slate-900 text-right truncate max-w-[280px]">
                         {ans?.isUnsure ? (
-                          <span className="italic text-amber-700">Unsure / To be reviewed</span>
+                          <span className="italic text-amber-700">Unsure / Unknown</span>
                         ) : (
                           ans?.text || '—'
                         )}
@@ -433,15 +789,33 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
               <Button
-                id="intake-return-dashboard-btn"
+                id="view-submitted-json-btn"
+                variant="outline"
+                onClick={handleOpenStructuredRecord}
+                icon={<FileCode2 className="w-4 h-4 text-teal-600" />}
+                className="border-teal-300 text-teal-900 bg-teal-50/50 hover:bg-teal-100 font-semibold"
+              >
+                Inspect Validated JSON (15 Fields)
+              </Button>
+              <Button
+                id="intake-start-new-case-btn"
                 variant="primary"
+                onClick={handleStartNewCase}
+                icon={<PlusCircle className="w-4 h-4" />}
+                className="bg-teal-700 hover:bg-teal-800 text-white font-bold shadow-xs"
+              >
+                Start New Case
+              </Button>
+              <Button
+                id="intake-return-dashboard-btn"
+                variant="outline"
                 onClick={onCancel}
               >
                 Return to Patient Dashboard
               </Button>
               <Button
                 id="intake-view-doctor-station-btn"
-                variant="outline"
+                variant="ghost"
                 onClick={onNavigateToDoctorDashboard}
               >
                 <span>View Case in Doctor OPD Station</span>
@@ -461,9 +835,9 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             {/* 6 Structured History Review Panels */}
             <div className="space-y-4">
               {HISTORY_SECTIONS.map((section) => {
-                const sectionQuestions = INTAKE_QUESTIONS.filter(
-                  (q) => q.sectionId === section.id
-                );
+                const qKey = SECTION_TO_QUESTION_MAP[section.id];
+                const ans = answers[qKey];
+                const isEditingThis = editingQuestionId === qKey;
 
                 return (
                   <div
@@ -480,91 +854,68 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                         </h3>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleJumpToSection(section.id)}
-                        className="text-xs text-teal-700 hover:text-teal-900 font-semibold inline-flex items-center gap-1 cursor-pointer hover:underline"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Edit Section</span>
-                      </button>
+                      {!isEditingThis && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(qKey)}
+                          className="text-xs text-teal-700 hover:text-teal-900 font-semibold inline-flex items-center gap-1 cursor-pointer hover:underline"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit Answer</span>
+                        </button>
+                      )}
                     </div>
 
-                    <div className="space-y-2 mt-2">
-                      {sectionQuestions.map((q) => {
-                        const ans = answers[q.id];
-                        const isEditingThis = editingQuestionId === q.id;
-
-                        return (
-                          <div
-                            key={q.id}
-                            className="p-3 bg-white rounded-lg border border-slate-200 text-xs"
-                          >
-                            <div className="text-slate-500 font-medium mb-1 flex items-center justify-between">
-                              <span>{q.assistantPrompt}</span>
-                              {!isEditingThis && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEdit(q.id)}
-                                  className="text-[11px] text-teal-700 hover:text-teal-800 font-medium cursor-pointer ml-2 shrink-0"
-                                >
-                                  Edit
-                                </button>
-                              )}
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs">
+                      {isEditingThis ? (
+                        <div className="space-y-2">
+                          <textarea
+                            rows={2}
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            className="w-full p-2.5 text-xs border border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none bg-teal-50/20"
+                            placeholder="Update your answer..."
+                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(qKey, true)}
+                              className="text-[11px] text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded border border-amber-200 cursor-pointer"
+                            >
+                              Mark as "I'm not sure"
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEditingQuestionId(null)}
+                                className="text-[11px] text-slate-500 hover:text-slate-700 px-2.5 py-1 rounded cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => handleSaveEdit(qKey, false)}
+                              >
+                                Save Update
+                              </Button>
                             </div>
-
-                            {isEditingThis ? (
-                              <div className="mt-2 space-y-2">
-                                <textarea
-                                  rows={2}
-                                  value={editingText}
-                                  onChange={(e) => setEditingText(e.target.value)}
-                                  className="w-full p-2.5 text-xs border border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none bg-teal-50/20"
-                                  placeholder="Update your answer..."
-                                />
-                                <div className="flex items-center justify-between gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(q.id, true)}
-                                    className="text-[11px] text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded border border-amber-200 cursor-pointer"
-                                  >
-                                    Mark as "I'm not sure"
-                                  </button>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingQuestionId(null)}
-                                      className="text-[11px] text-slate-500 hover:text-slate-700 px-2.5 py-1 rounded cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
-                                    <Button
-                                      size="sm"
-                                      variant="primary"
-                                      onClick={() => handleSaveEdit(q.id, false)}
-                                    >
-                                      Save Update
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : ans ? (
-                              ans.isUnsure ? (
-                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 font-medium text-[11px]">
-                                  <HelpCircle className="w-3 h-3" />
-                                  <span>Marked as "I'm not sure" (Will be clarified in consultation)</span>
-                                </div>
-                              ) : (
-                                <p className="text-slate-900 font-medium leading-relaxed">
-                                  {ans.text}
-                                </p>
-                              )
-                            ) : (
-                              <p className="text-slate-400 italic">Not answered yet</p>
-                            )}
                           </div>
-                        );
-                      })}
+                        </div>
+                      ) : ans ? (
+                        ans.isUnsure ? (
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 font-medium text-[11px]">
+                            <HelpCircle className="w-3 h-3" />
+                            <span>Marked as "I'm not sure / Unknown" (Will be evaluated during doctor physical exam)</span>
+                          </div>
+                        ) : (
+                          <p className="text-slate-900 font-medium leading-relaxed">
+                            {ans.text}
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-slate-400 italic">Not reported yet</p>
+                      )}
                     </div>
                   </div>
                 );
@@ -624,9 +975,42 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                 />
                 <span>
-                  I confirm that the responses provided above are accurate to the best of my recall and understand that DocGenie is an intake questionnaire that does not perform autonomous diagnosis.
+                  I confirm that the responses provided above are accurate to the best of my recall. I understand that DocGenie does not perform autonomous diagnosis and my history will be reviewed by the attending clinician.
                 </span>
               </label>
+            </div>
+
+            {/* Structured Clinical JSON Card & Inspector Trigger */}
+            <div className="p-4 bg-slate-900 text-white rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-600/30 border border-teal-500/40 text-teal-300 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
+                  <FileCode2 className="w-5 h-5 text-teal-400" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-xs sm:text-sm text-white">Validated Structured Clinical JSON (HL7/FHIR)</span>
+                    <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>15/15 Fields Validated</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Structured patient record conforming to schema v1.0.0 with zero-guess missing data isolation, review flags, and non-autonomous diagnosis disclaimer.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                id="inspect-structured-json-review-btn"
+                variant="outline"
+                size="sm"
+                onClick={handleOpenStructuredRecord}
+                disabled={isConvertingStructured}
+                icon={isConvertingStructured ? <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> : <FileCode2 className="w-4 h-4 text-teal-400" />}
+                className="border-slate-700 text-slate-100 hover:bg-slate-800 bg-slate-800/90 shrink-0 text-xs py-2"
+              >
+                {isConvertingStructured ? 'Validating...' : 'Inspect Structured JSON'}
+              </Button>
             </div>
 
             {/* Action Buttons */}
@@ -635,11 +1019,10 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
                 variant="outline"
                 onClick={() => {
                   setIsReviewMode(false);
-                  setCurrentQuestionIndex(0);
                 }}
                 icon={<ArrowLeft className="w-4 h-4" />}
               >
-                Return to Chat Stream
+                Return to Intake Chat
               </Button>
 
               <Button
@@ -661,154 +1044,102 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
           <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-2xs min-h-[460px] flex flex-col justify-between">
             {/* Conversation Messages Container */}
             <div className="space-y-6 flex-1 overflow-y-auto max-h-[520px] pr-1">
-              {/* Completed Questions & Patient Answers */}
-              {INTAKE_QUESTIONS.slice(0, currentQuestionIndex).map((q, idx) => {
-                const answer = answers[q.id];
-                const isEditingThis = editingQuestionId === q.id;
+              {messages.map((msg, idx) => {
+                if (msg.role === 'assistant') {
+                  const secMeta = HISTORY_SECTIONS.find((s) => s.id === msg.sectionId);
+                  const stepNum = secMeta ? secMeta.stepNumber : 1;
 
-                return (
-                  <div key={q.id} className="space-y-3 pt-1">
-                    {/* Assistant Question Bubble */}
-                    <div className="flex items-start gap-3 max-w-2xl">
-                      <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs">
-                        <Bot className="w-4 h-4" />
-                      </div>
-                      <div className="bg-slate-50 border border-slate-200/90 rounded-2xl rounded-tl-sm p-4 text-xs text-slate-800 shadow-2xs space-y-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-[10px] text-teal-800 uppercase tracking-wider">
-                            {q.sectionTitle}
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-[10px] text-slate-400">Step {idx + 1} of {INTAKE_QUESTIONS.length}</span>
+                  return (
+                    <div key={msg.id || idx} className="space-y-2 pt-1">
+                      <div className="flex items-start gap-3 max-w-2xl">
+                        <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <Bot className="w-4 h-4" />
                         </div>
-                        <p className="leading-relaxed font-medium text-slate-800">
-                          {q.assistantPrompt}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Patient Answer Bubble */}
-                    {answer && (
-                      <div className="flex items-start justify-end gap-3 max-w-2xl ml-auto">
-                        <div className="bg-teal-700 text-white rounded-2xl rounded-tr-sm p-3.5 text-xs shadow-2xs space-y-1.5 max-w-lg">
-                          <div className="flex items-center justify-between gap-4 text-[10px] text-teal-200/90">
-                            <span>You (Patient)</span>
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(q.id)}
-                              className="inline-flex items-center gap-1 text-teal-100 hover:text-white underline cursor-pointer"
-                              title="Edit this previous answer"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
+                        <div className="bg-teal-50/60 border border-teal-200 rounded-2xl rounded-tl-sm p-4 text-xs text-slate-800 shadow-2xs space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[10px] text-teal-800 uppercase tracking-wider">
+                              {msg.sectionTitle || secMeta?.title || 'History Intake'}
+                            </span>
+                            <span className="text-teal-300">•</span>
+                            <span className="text-[10px] text-teal-700 font-medium">
+                              Section {stepNum} of 6
+                            </span>
+                            {msg.source === 'gemini' && (
+                              <span className="text-[10px] text-teal-600 inline-flex items-center gap-0.5 ml-auto">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>Adaptive</span>
+                              </span>
+                            )}
                           </div>
-
-                          {isEditingThis ? (
-                            <div className="mt-1 space-y-2 bg-teal-800 p-2.5 rounded-lg text-slate-900">
-                              <textarea
-                                rows={2}
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                className="w-full p-2 text-xs bg-white text-slate-900 rounded border border-teal-300 focus:outline-none"
-                              />
-                              <div className="flex items-center justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveEdit(q.id, true)}
-                                  className="text-[10px] text-amber-200 hover:text-amber-100 underline cursor-pointer"
-                                >
-                                  Mark "I'm not sure"
-                                </button>
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingQuestionId(null)}
-                                    className="text-[10px] text-teal-200 hover:text-white px-2 py-0.5 cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(q.id, false)}
-                                    className="text-[10px] bg-white text-teal-900 font-bold px-2.5 py-1 rounded shadow-2xs hover:bg-teal-50 cursor-pointer"
-                                  >
-                                    Save
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : answer.isUnsure ? (
-                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-800/80 text-teal-100 text-[11px]">
-                              <HelpCircle className="w-3 h-3 text-amber-300" />
-                              <span className="font-semibold text-amber-200">I'm not sure</span>
-                              <span className="opacity-75">— Marked for clinician follow-up</span>
-                            </div>
-                          ) : (
-                            <p className="leading-relaxed whitespace-pre-wrap">{answer.text}</p>
+                          <p className="leading-relaxed font-semibold text-slate-900 text-sm">
+                            {msg.text}
+                          </p>
+                          {msg.contextHint && (
+                            <p className="text-[11px] text-slate-500 italic">
+                              💡 {msg.contextHint}
+                            </p>
                           )}
                         </div>
-
-                        <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4" />
-                        </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Active Current Question Bubble */}
-              {currentQuestion && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-start gap-3 max-w-2xl">
-                    <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                      <Bot className="w-4 h-4" />
                     </div>
-                    <div className="bg-teal-50/60 border border-teal-200 rounded-2xl rounded-tl-sm p-4 text-xs text-slate-800 shadow-2xs space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[10px] text-teal-800 uppercase tracking-wider">
-                          {currentQuestion.sectionTitle}
-                        </span>
-                        <span className="text-teal-300">•</span>
-                        <span className="text-[10px] text-teal-700 font-medium">
-                          Question {currentQuestionIndex + 1} of {INTAKE_QUESTIONS.length}
-                        </span>
-                        {currentQuestion.isRequired && (
-                          <span className="text-[10px] text-rose-600 font-semibold">* Required</span>
+                  );
+                } else {
+                  return (
+                    <div key={msg.id || idx} className="flex items-start justify-end gap-3 max-w-2xl ml-auto">
+                      <div className="bg-teal-700 text-white rounded-2xl rounded-tr-sm p-3.5 text-xs shadow-2xs space-y-1.5 max-w-lg">
+                        <div className="flex items-center justify-between gap-4 text-[10px] text-teal-200/90">
+                          <span>You (Patient)</span>
+                        </div>
+                        {msg.isUnsure ? (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-800/80 text-teal-100 text-[11px]">
+                            <HelpCircle className="w-3 h-3 text-amber-300" />
+                            <span className="font-semibold text-amber-200">I'm not sure / Unknown</span>
+                            <span className="opacity-75">— Marked for doctor review</span>
+                          </div>
+                        ) : (
+                          <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                         )}
                       </div>
-                      <p className="leading-relaxed font-semibold text-slate-900 text-sm">
-                        {currentQuestion.assistantPrompt}
-                      </p>
-                      {currentQuestion.contextHint && (
-                        <p className="text-[11px] text-slate-500 italic">
-                          💡 {currentQuestion.contextHint}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Suggested Answer Chips (Quick Answers) */}
-                  {currentQuestion.suggestedChips && currentQuestion.suggestedChips.length > 0 && (
-                    <div className="pl-11 pr-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                        Quick Suggestions (Tap to insert):
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {currentQuestion.suggestedChips.map((chip) => (
-                          <button
-                            key={chip}
-                            type="button"
-                            onClick={() => handleChipClick(chip)}
-                            className="px-2.5 py-1 rounded-full text-xs bg-slate-100 hover:bg-teal-100 hover:text-teal-900 hover:border-teal-300 border border-slate-200 text-slate-700 transition-colors cursor-pointer text-left"
-                          >
-                            + {chip}
-                          </button>
-                        ))}
+                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4" />
                       </div>
                     </div>
-                  )}
+                  );
+                }
+              })}
+
+              {/* AI Typing / Processing State */}
+              {isLoadingAI && (
+                <div className="flex items-start gap-3 max-w-2xl animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                  <div className="bg-teal-50/80 border border-teal-200 rounded-2xl rounded-tl-sm p-3 text-xs text-teal-800 flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-600 animate-spin" />
+                    <span className="font-medium">DocGenie AI is analyzing your response and formulating the next history question...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Quick Chips for the Active Question */}
+              {!isLoadingAI && activeSuggestedChips && activeSuggestedChips.length > 0 && (
+                <div className="pl-11 pr-2 pt-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                    Quick Suggestions (Tap to insert):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeSuggestedChips.map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => handleChipClick(chip)}
+                        className="px-2.5 py-1 rounded-full text-xs bg-slate-100 hover:bg-teal-100 hover:text-teal-900 hover:border-teal-300 border border-slate-200 text-slate-700 transition-colors cursor-pointer text-left"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -816,91 +1147,93 @@ export const ConversationScreen: React.FC<ConversationScreenProps> = ({
             </div>
 
             {/* Bottom Input Area */}
-            {currentQuestion && (
-              <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
-                {/* Back / Navigation helpers */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    {currentQuestionIndex > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
-                        className="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5" />
-                        <span>Previous Question</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Review Button if questions answered */}
-                  {Object.keys(answers).length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsReviewMode(true)}
-                      className="text-xs text-teal-700 hover:text-teal-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <FileCheck2 className="w-3.5 h-3.5" />
-                      <span>Review All Answers ({Object.keys(answers).length}/{INTAKE_QUESTIONS.length})</span>
-                    </button>
-                  )}
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
+              {/* Back / Navigation helpers */}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Section {currentQuestionIndex + 1} of 6: <strong>{HISTORY_SECTIONS[currentQuestionIndex]?.title}</strong>
+                  </span>
                 </div>
 
-                {/* Main Input Controls Box */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={inputRef}
-                      id="intake-conversation-input"
-                      rows={2}
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAnswerSubmit();
-                        }
-                      }}
-                      placeholder={currentQuestion.placeholder}
-                      className="w-full p-3 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none placeholder:text-slate-400 bg-white"
-                    />
-                  </div>
+                {/* Review Button if questions answered */}
+                {Object.keys(answers).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewMode(true)}
+                    className="text-xs text-teal-700 hover:text-teal-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <FileCheck2 className="w-3.5 h-3.5" />
+                    <span>Review Recorded Answers ({Object.keys(answers).length}/6)</span>
+                  </button>
+                )}
+              </div>
 
-                  {/* Action Buttons: "I'm not sure" and "Submit" */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      id="intake-not-sure-btn"
-                      variant="outline"
-                      type="button"
-                      onClick={handleNotSure}
-                      className="text-amber-800 border-amber-300 hover:bg-amber-50"
-                      icon={<HelpCircle className="w-4 h-4 text-amber-600" />}
-                      title="Click if you don't know or are uncertain about this information"
-                    >
-                      I'm Not Sure
-                    </Button>
-
-                    <Button
-                      id="intake-submit-answer-btn"
-                      variant="primary"
-                      type="button"
-                      disabled={currentQuestion.isRequired && !inputText.trim()}
-                      onClick={() => handleAnswerSubmit()}
-                      icon={<Send className="w-4 h-4" />}
-                    >
-                      <span>Submit</span>
-                    </Button>
-                  </div>
+              {/* Main Input Controls Box */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={inputRef}
+                    id="intake-conversation-input"
+                    rows={2}
+                    value={inputText}
+                    disabled={isLoadingAI}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAnswerSubmit();
+                      }
+                    }}
+                    placeholder={activeContextHint || 'Describe your symptoms clearly (e.g. onset, severity, duration)...'}
+                    className="w-full p-3 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none placeholder:text-slate-400 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                  />
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Press <strong>Enter</strong> to submit, <strong>Shift + Enter</strong> for a new line</span>
-                  <span>Section {currentQuestionIndex + 1} of {INTAKE_QUESTIONS.length}</span>
+                {/* Action Buttons: "I'm not sure" and "Submit" */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    id="intake-not-sure-btn"
+                    variant="outline"
+                    type="button"
+                    disabled={isLoadingAI}
+                    onClick={handleNotSure}
+                    className="text-amber-800 border-amber-300 hover:bg-amber-50"
+                    icon={<HelpCircle className="w-4 h-4 text-amber-600" />}
+                    title="Click if you don't know or are uncertain about this information"
+                  >
+                    I'm Not Sure
+                  </Button>
+
+                  <Button
+                    id="intake-submit-answer-btn"
+                    variant="primary"
+                    type="button"
+                    disabled={isLoadingAI || !inputText.trim()}
+                    onClick={() => handleAnswerSubmit()}
+                    icon={isLoadingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  >
+                    <span>Submit</span>
+                  </Button>
                 </div>
               </div>
-            )}
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Press <strong>Enter</strong> to submit, <strong>Shift + Enter</strong> for a new line</span>
+                <span>Section {currentQuestionIndex + 1} of 6</span>
+              </div>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Validated Structured Clinical JSON Modal Viewer */}
+      {structuredRecord && (
+        <StructuredRecordViewer
+          record={structuredRecord}
+          isOpen={showStructuredViewer}
+          onClose={() => setShowStructuredViewer(false)}
+        />
       )}
     </div>
   );

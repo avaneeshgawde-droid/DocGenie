@@ -82,6 +82,7 @@ export async function saveStoredCase(clinicalCase: ClinicalCase): Promise<void> 
         doctor_notes: clinicalCase.doctorNotes || '',
         verified_at: clinicalCase.verifiedAt || null,
         assigned_doctor_name: clinicalCase.assignedDoctorName || null,
+        structured_record: clinicalCase.structuredIntakeRecord || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -137,6 +138,7 @@ export async function fetchStoredCasesAsync(): Promise<ClinicalCase[]> {
       doctorNotes: row.doctor_notes || '',
       verifiedAt: row.verified_at || undefined,
       assignedDoctorName: row.assigned_doctor_name || undefined,
+      structuredIntakeRecord: row.structured_record || undefined,
     }));
 
     // Merge Supabase cases with any local cases not yet synced

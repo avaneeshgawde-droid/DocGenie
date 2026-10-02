@@ -52,8 +52,10 @@ export const PatientDashboardView: React.FC<PatientDashboardViewProps> = ({
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // Filter cases for the active patient
-  const patientCases = cases.filter((c) => c.patientId === patient.id);
+  // Filter cases for the active patient (by patient ID or UHID)
+  const patientCases = cases.filter(
+    (c) => c.patientId === patient.id || (patient.uhid && c.uhid === patient.uhid)
+  );
 
   // Profile Save Handler
   const handleSaveProfile = (updated: Partial<SyntheticPatient>) => {
